@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        form { max-width: 300px; margin: auto; }
+        input { display: block; margin: 10px 0; padding: 5px; width: 100%; }
+        button { padding: 5px; width: 100%; }
+    </style>
+</head>
+<body>
+<h2>Login to Student Management</h2>
+<form method="post" action="/login">
+    <input type="text" name="username" placeholder="Username" required />
+    <input type="password" name="password" placeholder="Password" required />
+    <button type="submit">Login</button>
+</form>
+</body>
+</html>
