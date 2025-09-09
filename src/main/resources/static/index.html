@@ -1,164 +1,448 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Student Management</title>
+
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- AG Grid Community UMD (pinned version, no CSS imports for Theming API) -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f2f2f2; }
-        input, button { margin: 5px; padding: 5px; }
+        html { height: 100%; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        main { flex: 1; }
+
+        /* Scope form controls ONLY to our forms (avoid affecting AG Grid filter inputs) */
+        .forms input, .forms button { margin: 5px; padding: 6px 10px; }
+
+        .section { display: none; }
+        .active { display: block; }
+        .header { margin-bottom: 20px; }
+        .header button { margin-right: 10px; }
+        .admin-only { display: none; }
+
+        /* AG Grid comfortable sizing */
+        .ag-theme-alpine {
+            --ag-row-height: 44px;
+            --ag-header-height: 58px;
+            --ag-font-size: 14px;
+        }
+
+        footer {
+            text-align: center;
+            color: #666;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
+<main>
+    <h2>Management Dashboard</h2>
+    <div class="header">
+        <button onclick="showSection('students')">Students</button>
+        <button onclick="showSection('teachers')">Teachers</button>
+        <button onclick="showSection('courses')">Courses</button>
+        <button onclick="logout()">Logout</button>
+    </div>
 
-<h2>Student Management</h2>
+    <!-- Students Section -->
+    <div id="students" class="section active">
+        <h3>Students</h3>
+        <form id="studentForm" class="admin-only forms">
+            <input type="hidden" id="studentRoll" />
+            <label>Name*:</label> <input type="text" id="studentName" placeholder="Name" /><br />
+            <label>Email*:</label> <input type="email" id="studentEmail" placeholder="Email" /><br />
+            <label>Age*:</label> <input type="number" id="studentAge" placeholder="Age" /><br />
+            <label>Course*:</label> <input type="text" id="studentCourse" placeholder="Course" /><br />
+            <button type="submit" id="studentSubmitBtn">Add Student</button>
+        </form>
+        <div id="studentGrid" class="ag-theme-alpine" style="height: 460px; width: 100%;"></div>
+    </div>
 
-<form id="studentForm">
-    <input type="hidden" id="roll" />
-    <input type="text" id="name" placeholder="Name" required />
-    <input type="email" id="email" placeholder="Email" required />
-    <input type="number" id="age" placeholder="Age" required />
-    <input type="text" id="course" placeholder="Course" required />
-    <button type="submit" id="submitBtn">Add Student</button>
-</form>
+    <!-- Teachers Section -->
+    <div id="teachers" class="section">
+        <h3>Teachers</h3>
+        <form id="teacherForm" class="admin-only forms">
+            <input type="hidden" id="teacherId" />
+            <label>Name*:</label> <input type="text" id="teacherName" placeholder="Name" /><br />
+            <label>Email*:</label> <input type="email" id="teacherEmail" placeholder="Email" /><br />
+            <label>Subject*:</label> <input type="text" id="teacherSubject" placeholder="Subject" /><br />
+            <button type="submit" id="teacherSubmitBtn">Add Teacher</button>
+        </form>
+        <div id="teacherGrid" class="ag-theme-alpine" style="height: 460px; width: 100%;"></div>
+    </div>
 
-<button onclick="logout()">Logout</button>
+    <!-- Courses Section -->
+    <div id="courses" class="section">
+        <h3>Courses</h3>
+        <form id="courseForm" class="admin-only forms">
+            <input type="hidden" id="courseId" />
+            <label>Name*:</label> <input type="text" id="courseName" placeholder="Name" /><br />
+            <label>Description*:</label> <input type="text" id="courseDescription" placeholder="Description" /><br />
+            <button type="submit" id="courseSubmitBtn">Add Course</button>
+        </form>
+        <div id="courseGrid" class="ag-theme-alpine" style="height: 460px; width: 100%;"></div>
+    </div>
+</main>
 
-<table>
-    <thead>
-    <tr>
-        <th>Roll</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Age</th>
-        <th>Course</th>
-        <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody id="studentTable"></tbody>
-</table>
+<footer>
+    © 2025 Student Management System. All rights reserved.
+</footer>
 
 <script>
+    let currentRole = 'USER';
+
     $(document).ready(function () {
-        loadStudents();
+        fetchRole().done(function() {
+            showSection('students');
+        }).fail(function() {
+            showSection('students');
+        });
+    });
 
-        // Helper to check if response is likely login HTML
-        function isLoginRedirect(response) {
-            return typeof response === 'string' && response.includes('<html') && response.includes('login');
+    function fetchRole() {
+        return $.get("/api/current-role", function (data) {
+            currentRole = data.role;
+            if (currentRole === 'ADMIN') {
+                $('.admin-only').show();
+                console.log('Admin role detected - showing action buttons and forms');
+            } else {
+                console.log('User role detected - hiding action buttons and forms');
+            }
+        }).fail(function (xhr) {
+            alert("Error fetching role: " + (xhr.responseText || "Unknown error") + ". Assuming USER role.");
+            console.error('Role fetch failed:', xhr);
+        });
+    }
+
+    function showSection(section) {
+        $('.section').removeClass('active');
+        $('#' + section).addClass('active');
+        loadData(section);
+    }
+
+    function isLoginRedirect(response) {
+        return typeof response === 'string' && response.includes('<html') && response.includes('login');
+    }
+
+    // Robust mapper: handles single CSV string, array with CSV at [0], or proper [roll, name, email, age, course]
+    function mapStudentRow(row) {
+        let parts = [];
+        if (typeof row === 'string') {
+            parts = row.split(/\s*,\s*/);
+        } else if (Array.isArray(row)) {
+            // Find and split the first string with commas
+            const csvItem = row.find(v => typeof v === 'string' && v.includes(','));
+            if (csvItem) {
+                parts = csvItem.split(/\s*,\s*/);
+            } else {
+                parts = row;
+            }
         }
+        // Pad to 5 and return mapped object
+        while (parts.length < 5) parts.push('');
+        return {
+            roll: parts[0],
+            name: parts[1],
+            email: parts[2],
+            age: parts[3],
+            course: parts[4]
+        };
+    }
 
-        // Load Students
-        function loadStudents() {
-            $.get("/students/all", function (data) {
-                let rows = "";
-                data.forEach(student => {
-                    rows += `
-                        <tr>
-                            <td>${student[0]}</td>
-                            <td>${student[1]}</td>
-                            <td>${student[2]}</td>
-                            <td>${student[3]}</td>
-                            <td>${student[4]}</td>
-                            <td>
-                                <button onclick="editStudent(${student[0]}, '${student[1]}', '${student[2]}', ${student[3]}, '${student[4]}')">Edit</button>
-                                <button onclick="deleteStudent(${student[0]})">Delete</button>
-                            </td>
-                        </tr>`;
-                });
-                $("#studentTable").html(rows);
-            }).fail(function (xhr) {
-                if (xhr.status === 401 || xhr.status === 403 || isLoginRedirect(xhr.responseText)) {
-                    alert("Session expired or access denied. Redirecting to login...");
-                    window.location.href = "/login";
-                } else {
-                    alert("Error loading students: " + (xhr.responseText || "Unknown error"));
+    function buildActionsRenderer(section) {
+        return (params) => {
+            const container = document.createElement('span');
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.style.marginRight = '8px';
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Delete';
+
+            const d = params.data || {};
+            editBtn.addEventListener('click', () => {
+                if (section === 'students') {
+                    window.editItem('students', d.roll, d.name, d.email, d.age, d.course);
+                } else if (section === 'teachers') {
+                    window.editItem('teachers', d.id, d.name, d.email, d.subject);
+                } else if (section === 'courses') {
+                    window.editItem('courses', d.id, d.name, d.description);
                 }
+            });
+            delBtn.addEventListener('click', () => {
+                const id = d.id ?? d.roll;
+                window.deleteItem(section, id);
+            });
+
+            container.appendChild(editBtn);
+            container.appendChild(delBtn);
+            return container;
+        };
+    }
+
+    function loadData(section) {
+        let url, gridId, columnDefs, rowDataMapper;
+
+        if (section === 'students') {
+            url = "/students/all";
+            gridId = "studentGrid";
+            columnDefs = [
+                { headerName: "Roll", field: "roll", width: 120, filter: 'agNumberColumnFilter' },
+                { headerName: "Name", field: "name", flex: 1, minWidth: 180, filter: 'agTextColumnFilter' },
+                { headerName: "Email", field: "email", flex: 1, minWidth: 220, filter: 'agTextColumnFilter' },
+                { headerName: "Age", field: "age", width: 120, filter: 'agNumberColumnFilter' },
+                { headerName: "Course", field: "course", flex: 1, minWidth: 160, filter: 'agTextColumnFilter' }
+            ];
+            rowDataMapper = (item) => mapStudentRow(item);
+        } else if (section === 'teachers') {
+            url = "/teachers/all";
+            gridId = "teacherGrid";
+            columnDefs = [
+                { headerName: "ID", field: "id", width: 120, filter: 'agNumberColumnFilter' },
+                { headerName: "Name", field: "name", flex: 1, minWidth: 180, filter: 'agTextColumnFilter' },
+                { headerName: "Email", field: "email", flex: 1, minWidth: 220, filter: 'agTextColumnFilter' },
+                { headerName: "Subject", field: "subject", flex: 1, minWidth: 180, filter: 'agTextColumnFilter' }
+            ];
+            rowDataMapper = (item) => ({
+                id: item[0] ?? '',
+                name: item[1] ?? '',
+                email: item[2] ?? '',
+                subject: item[3] ?? ''
+            });
+        } else {
+            url = "/courses/all";
+            gridId = "courseGrid";
+            columnDefs = [
+                { headerName: "ID", field: "id", width: 120, filter: 'agNumberColumnFilter' },
+                { headerName: "Name", field: "name", flex: 1, minWidth: 180, filter: 'agTextColumnFilter' },
+                { headerName: "Description", field: "description", flex: 1, minWidth: 220, filter: 'agTextColumnFilter' }
+            ];
+            rowDataMapper = (item) => ({
+                id: item[0] ?? '',
+                name: item[1] ?? '',
+                description: item[2] ?? ''
             });
         }
 
-        // Add or Update Student
-        $("#studentForm").submit(function (event) {
-            event.preventDefault();
+        if (currentRole === 'ADMIN') {
+            columnDefs.push({
+                headerName: "Actions",
+                cellRenderer: buildActionsRenderer(section),
+                minWidth: 200,
+                pinned: 'right'
+            });
+        }
 
-            let studentData = {
-                roll: $("#roll").val(),
-                name: $("#name").val(),
-                email: $("#email").val(),
-                age: $("#age").val(),
-                course: $("#course").val()
+        $.get(url, function (data) {
+            const rowData = (data || []).map(rowDataMapper);
+
+            const e = document.getElementById(gridId);
+            e.innerHTML = '';
+
+            const gridOptions = {
+                columnDefs,
+                rowData,
+                defaultColDef: {
+                    sortable: true,
+                    filter: true,          // popup filters
+                    floatingFilter: false, // avoid header input collisions
+                    resizable: true,
+                    // Defensive formatter to stringify objects and avoid error #48
+                    valueFormatter: (p) => {
+                        const v = p.value;
+                        return (v == null) ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+                    }
+                },
+                rowHeight: 44,
+                headerHeight: 58,
+                animateRows: true,
+                onFirstDataRendered: (ev) => ev.api.sizeColumnsToFit()
             };
 
-            let url = studentData.roll ? "/students/update" : "/students/add";
-            let method = studentData.roll ? "PUT" : "POST";
+            agGrid.createGrid(e, gridOptions);
 
+            console.log(`Grid rendered for ${section} with ${rowData.length} rows`);
+        }).fail(function (xhr) {
+            if (xhr.status === 401 || xhr.status === 403 || isLoginRedirect(xhr.responseText)) {
+                alert("Session expired or access denied. Redirecting to login...");
+                window.location.href = "/login";
+            } else {
+                alert("Error loading data: " + (xhr.responseText || "Unknown error"));
+            }
+            console.error(`Load data failed for ${section}:`, xhr);
+        });
+    }
+
+    // Validation
+    function validateForm(section) {
+        let isValid = true;
+        let fields = [];
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (section === 'students') {
+            fields = [
+                { id: '#studentName', name: 'Name', isEmail: false },
+                { id: '#studentEmail', name: 'Email', isEmail: true },
+                { id: '#studentAge', name: 'Age', isEmail: false },
+                { id: '#studentCourse', name: 'Course', isEmail: false }
+            ];
+        } else if (section === 'teachers') {
+            fields = [
+                { id: '#teacherName', name: 'Name', isEmail: false },
+                { id: '#teacherEmail', name: 'Email', isEmail: true },
+                { id: '#teacherSubject', name: 'Subject', isEmail: false }
+            ];
+        } else {
+            fields = [
+                { id: '#courseName', name: 'Name', isEmail: false },
+                { id: '#courseDescription', name: 'Description', isEmail: false }
+            ];
+        }
+
+        fields.forEach(field => {
+            const value = $(field.id).val().trim();
+            if (value === '') {
+                alert(`${field.name} is required.`);
+                isValid = false;
+            } else if (field.isEmail && !emailRegex.test(value)) {
+                alert(`${field.name} must be a valid email address (e.g., example@domain.com).`);
+                isValid = false;
+            }
+        });
+
+        return isValid;
+    }
+
+    function submitForm(section) {
+        if (!validateForm(section)) return;
+
+        let data, url, method, formId, submitBtnId;
+        if (section === 'students') {
+            data = {
+                roll: $("#studentRoll").val(),
+                name: $("#studentName").val(),
+                email: $("#studentEmail").val(),
+                age: $("#studentAge").val(),
+                course: $("#studentCourse").val()
+            };
+            url = data.roll ? "/students/update" : "/students/add";
+            method = data.roll ? "PUT" : "POST";
+            formId = "#studentForm";
+            submitBtnId = "#studentSubmitBtn";
+        } else if (section === 'teachers') {
+            data = {
+                id: $("#teacherId").val(),
+                name: $("#teacherName").val(),
+                email: $("#teacherEmail").val(),
+                subject: $("#teacherSubject").val()
+            };
+            url = data.id ? "/teachers/update" : "/teachers/add";
+            method = data.id ? "PUT" : "POST";
+            formId = "#teacherForm";
+            submitBtnId = "#teacherSubmitBtn";
+        } else {
+            data = {
+                id: $("#courseId").val(),
+                name: $("#courseName").val(),
+                description: $("#courseDescription").val()
+            };
+            url = data.id ? "/courses/update" : "/courses/add";
+            method = data.id ? "PUT" : "POST";
+            formId = "#courseForm";
+            submitBtnId = "#courseSubmitBtn";
+        }
+
+        $.ajax({
+            type: method,
+            url: url,
+            contentType: "application/json",
+            data: JSON.stringify(data),
+            success: function (response) {
+                alert(response);
+                $(formId)[0].reset();
+                if (section === 'students') $("#studentRoll").val("");
+                else if (section === 'teachers') $("#teacherId").val("");
+                else $("#courseId").val("");
+                $(submitBtnId).text(`Add ${section.charAt(0).toUpperCase() + section.slice(1).slice(0, -1)}`);
+                loadData(section);
+            },
+            error: function (xhr) {
+                if (xhr.status === 401 || xhr.status === 403 || isLoginRedirect(xhr.responseText)) {
+                    alert("Access denied. Redirecting to login...");
+                    window.location.href = "/login";
+                } else {
+                    alert("Error: " + (xhr.responseText || "Unknown error"));
+                }
+                console.error(`Submit failed for ${section}:`, xhr);
+            }
+        });
+    }
+
+    $("#studentForm").submit(function (event) { event.preventDefault(); submitForm('students'); });
+    $("#teacherForm").submit(function (event) { event.preventDefault(); submitForm('teachers'); });
+    $("#courseForm").submit(function (event) { event.preventDefault(); submitForm('courses'); });
+
+    window.editItem = function (section, id, ...values) {
+        if (section === 'students') {
+            $("#studentRoll").val(id);
+            $("#studentName").val(values[0]);
+            $("#studentEmail").val(values[1]);
+            $("#studentAge").val(values[2]);
+            $("#studentCourse").val(values[3]);
+            $("#studentSubmitBtn").text("Update Student");
+        } else if (section === 'teachers') {
+            $("#teacherId").val(id);
+            $("#teacherName").val(values[0]);
+            $("#teacherEmail").val(values[1]);
+            $("#teacherSubject").val(values[2]);
+            $("#teacherSubmitBtn").text("Update Teacher");
+        } else {
+            $("#courseId").val(id);
+            $("#courseName").val(values[0]);
+            $("#courseDescription").val(values[1]);
+            $("#courseSubmitBtn").text("Update Course");
+        }
+    };
+
+    window.deleteItem = function (section, id) {
+        if (confirm(`Are you sure you want to delete this ${section.slice(0, -1)}?`)) {
+            const url = `/${section}/delete/${id}`;
             $.ajax({
-                type: method,
+                type: "DELETE",
                 url: url,
-                contentType: "application/json",
-                data: JSON.stringify(studentData),
                 success: function (response) {
                     alert(response);
-                    $("#studentForm")[0].reset();
-                    $("#roll").val("");
-                    $("#submitBtn").text("Add Student");
-                    loadStudents();
+                    loadData(section);
                 },
                 error: function (xhr) {
                     if (xhr.status === 401 || xhr.status === 403 || isLoginRedirect(xhr.responseText)) {
                         alert("Access denied. Redirecting to login...");
                         window.location.href = "/login";
                     } else {
-                        alert("Error: " + (xhr.responseText || "Unknown error"));
+                        alert("Error deleting: " + (xhr.responseText || "Unknown error"));
                     }
+                    console.error(`Delete failed for ${section} ID ${id}:`, xhr);
                 }
             });
+        }
+    };
+
+    function logout() {
+        $.post("/logout").always(function () {
+            window.location.href = "/login";
         });
-
-        // Edit Student
-        window.editStudent = function (roll, name, email, age, course) {
-            $("#roll").val(roll);
-            $("#name").val(name);
-            $("#email").val(email);
-            $("#age").val(age);
-            $("#course").val(course);
-            $("#submitBtn").text("Update Student");
-        };
-
-        // Delete Student
-        window.deleteStudent = function (roll) {
-            if (confirm("Are you sure you want to delete this student?")) {
-                $.ajax({
-                    type: "DELETE",
-                    url: "/students/delete/" + roll,
-                    success: function (response) {
-                        alert(response);
-                        loadStudents();
-                    },
-                    error: function (xhr) {
-                        if (xhr.status === 401 || xhr.status === 403 || isLoginRedirect(xhr.responseText)) {
-                            alert("Access denied. Redirecting to login...");
-                            window.location.href = "/login";
-                        } else {
-                            alert("Error deleting: " + (xhr.responseText || "Unknown error"));
-                        }
-                    }
-                });
-            }
-        };
-
-        // Logout
-
-        window.logout = function () {
-            $.post("/logout")
-                .always(function () {  // Handles both success and redirect 'failures'
-                    window.location.href = "/login";
-                });
-        };
-    });
+    }
 </script>
-
 </body>
 </html>

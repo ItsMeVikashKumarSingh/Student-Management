@@ -19,10 +19,12 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/error", "/static/**", "/login**").permitAll()  // Permits /login and variants like /login?logout
-                        .requestMatchers("/index.html").authenticated()
-                        .requestMatchers("/students/all").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/students/add", "/students/update", "/students/delete/**").hasRole("ADMIN")
+                        .requestMatchers("/", "/error", "/static/**", "/login**").permitAll()
+                        .requestMatchers("/index.html", "/api/current-role").authenticated()  // Added /api/current-role
+                        .requestMatchers("/students/all", "/teachers/all", "/courses/all").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/students/add", "/students/update", "/students/delete/**",
+                                "/teachers/add", "/teachers/update", "/teachers/delete/**",
+                                "/courses/add", "/courses/update", "/courses/delete/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -31,7 +33,7 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login")  // Simplified to avoid param issues
+                        .logoutSuccessUrl("/login")
                         .permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable);
