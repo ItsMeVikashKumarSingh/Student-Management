@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teachers - Student Management</title>
+    <link rel="stylesheet" href="/css/shared.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
+    <script src="/js/shared.js"></script>
+    <script>
+        $(document).ready(() => {
+            fetchRole(() => {
+                toggleAdminBits();
+                loadTeachers();
+            });
+            $('#teacherForm').on('submit', e => { e.preventDefault(); saveTeacher(); });
+        });
+
+        function toggleAdminBits() {
+            if (window.currentRole === 'ADMIN') $('#insertBlock').removeClass('d-none');
+            else $('#insertBlock').addClass('d-none');
+
+            $('#pageTitle').text(window.currentRole === 'ADMIN' ? 'Manage Teachers' : 'View Teachers');
+        }
+
+        function resetForm() {
+            $('#teacherForm')[0].reset();
+            $('#teacherId').val('');
+            $('#teacherSubmitBtn').text('Add Teacher');
+        }
+
+        function saveTeacher() {
+            const data = {
+                id: $('#teacherId').val(),
+                name: $('#teacherName').val().trim(),
+                email: $('#teacherEmail').val().trim(),
+                subject: $('#teacherSubject').val().trim()
+            };
+
+            if (!data.name || !data.email || !data.subject) { alert('All fields are required'); return; }
+
+            $.ajax({
+                url: data.id ? '/teachers/update' : '/teachers/add',
+                method: data.id ? 'PUT' : 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: () => { resetForm(); loadTeachers(); },
+                error: err => alert(err.responseText || 'Server error')
+            });
+        }
+
+        function loadTeachers() {
+            $.get('/teachers/all', rows => {
+                const rowData = rows.map(r => ({
+                    id: r[0], name: r[1], email: r[2], subject: r[3]
+                }));
+
+                const cols = [
+                    {headerName:'ID', field:'id', width:110, filter:'agNumberColumnFilter'},
+                    {headerName:'Name', field:'name', flex:1, filter:'agTextColumnFilter'},
+                    {headerName:'Email', field:'email', flex:1, filter:'agTextColumnFilter'},
+                    {headerName:'Subject', field:'subject', flex:1, filter:'agTextColumnFilter'}
+                ];
+
+                if (window.currentRole === 'ADMIN') cols.push({
+                    headerName:'Actions',
+                    minWidth:170, pinned:'right',
+                    cellRenderer: p => {
+                        const wrap = document.createElement('span');
+                        const eBtn = $('<button class="btn btn-sm btn-outline-primary me-2">Edit</button>').on('click', () => editRow(p.data));
+                        const dBtn = $('<button class="btn btn-sm btn-outline-danger">Delete</button>').on('click', () => delRow(p.data.id));
+                        wrap.appendChild(eBtn[0]); wrap.appendChild(dBtn[0]);
+                        return wrap;
+                    }
+                });
+
+                const gridDiv = document.getElementById('teacherGrid');
+                gridDiv.innerHTML = '';
+                agGrid.createGrid(gridDiv, {
+                    columnDefs: cols,
+                    rowData,
+                    defaultColDef:{sortable:true,resizable:true,filter:true},
+                    rowHeight:44, headerHeight:58,
+                    onFirstDataRendered:e=>e.api.sizeColumnsToFit()
+                });
+            }).fail(() => alert('Failed to load teachers data.'));
+        }
+
+        function editRow(row) {
+            $('#teacherId').val(row.id);
+            $('#teacherName').val(row.name);
+            $('#teacherEmail').val(row.email);
+            $('#teacherSubject').val(row.subject);
+            $('#teacherSubmitBtn').text('Update Teacher');
+            window.scrollTo({top:0,behavior:'smooth'});
+        }
+
+        function delRow(id) {
+            if (!confirm('Delete this teacher?')) return;
+            $.ajax({
+                url:`/teachers/delete/${id}`, method:'DELETE',
+                success:() => loadTeachers(),
+                error:err => alert(err.responseText || 'Delete failed')
+            });
+        }
+    </script>
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a href="/dashboard.html">Dashboard</a></li>
+        <li><a href="/students.html">Students</a></li>
+        <li><a href="/teachers.html">Teachers</a></li>
+        <li><a href="/courses.html">Courses</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+    </ul>
+</nav>
+
+<main>
+    <h2 id="pageTitle" class="mb-4">Manage Teachers</h2>
+
+    <!-- INSERT / UPDATE FORM (hidden for users) -->
+    <section id="insertBlock" class="d-none mb-4">
+        <form id="teacherForm" class="p-3 border rounded bg-white shadow-sm">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name *</label>
+                    <input id="teacherName" type="text" class="form-control" placeholder="Full name" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email *</label>
+                    <input id="teacherEmail" type="email" class="form-control" placeholder="email@site.com" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Subject *</label>
+                    <input id="teacherSubject" type="text" class="form-control" placeholder="Subject name" required>
+                </div>
+            </div>
+
+            <input id="teacherId" type="hidden">
+
+            <div class="mt-3">
+                <button id="teacherSubmitBtn" class="btn btn-primary me-2" type="submit">Add Teacher</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancel</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- GRID -->
+    <div id="teacherGrid" class="ag-theme-alpine"></div>
+</main>
+
+<!-- Add this dialog HTML inside <body> (e.g., after <main>) in students.html, teachers.html, and courses.html -->
+<div id="validationAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 1050;">
+    <strong>Error:</strong> <span id="validationAlertMessage"></span>
+    <button type="button" class="btn-close" id="validationAlertClose" aria-label="Close"></button>
+</div>
+
+
+<footer>© 2025 Student Management System</footer>
+</body>
+</html>

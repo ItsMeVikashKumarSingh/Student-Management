@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Courses - Student Management</title>
+    <link rel="stylesheet" href="/css/shared.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
+    <script src="/js/shared.js"></script>
+    <script>
+        $(document).ready(function() {
+            fetchRole(function() {
+                toggleAdminBits();
+                loadCourses();
+            });
+            $('#courseForm').on('submit', function(e) {
+                e.preventDefault();
+                const fields = [
+                    { id: '#courseName', name: 'Name', isEmail: false },
+                    { id: '#courseDescription', name: 'Description', isEmail: false }
+                ];
+
+                if (validateForm(fields))   // Uses shared validateForm
+                       saveCourse();
+            });
+        });
+
+        function toggleAdminBits() {
+            if (window.currentRole === 'ADMIN') {
+                $('#insertBlock').removeClass('d-none');
+            } else {
+                $('#insertBlock').addClass('d-none');
+            }
+            updateTexts();
+        }
+
+        function updateTexts() {
+            let prefix = window.currentRole === 'ADMIN' ? 'Manage' : 'View';
+            $('#pageTitle').text(prefix + ' Courses');
+        }
+
+        function validateForm() {
+            const name = $('#courseName').val().trim();
+            const description = $('#courseDescription').val().trim();
+            if (!name) {
+                alert('Course name is required');
+                return false;
+            }
+            if (!description) {
+                alert('Course description is required');
+                return false;
+            }
+            return true;
+        }
+
+        function saveCourse() {
+            const id = $('#courseId').val();
+            const data = {
+                id: id,
+                name: $('#courseName').val().trim(),
+                description: $('#courseDescription').val().trim()
+            };
+            const url = id ? '/courses/update' : '/courses/add';
+            const method = id ? 'PUT' : 'POST';
+            $.ajax({
+                url: url,
+                method: method,
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function() {
+                    alert('Course saved successfully');
+                    resetForm();
+                    loadCourses();
+                },
+                error: function(xhr) {
+                    alert('Error: ' + (xhr.responseText || 'Unknown error'));
+                }
+            });
+        }
+
+        function loadCourses() {
+            $.get('/courses/all', function(data) {
+                if (!data || data.length === 0) {
+                    alert('No courses found');
+                    return;
+                }
+                const rowData = data.map(item => ({
+                    id: item[0],
+                    name: item[1],
+                    description: item[2]
+                }));
+                let columnDefs = [
+                    { headerName: 'ID', field: 'id', width: 90, filter: 'agNumberColumnFilter' },
+                    { headerName: 'Name', field: 'name', flex: 1, filter: 'agTextColumnFilter' },
+                    { headerName: 'Description', field: 'description', flex: 1, filter: 'agTextColumnFilter' }
+                ];
+                if (window.currentRole === 'ADMIN') {
+                    columnDefs.push({
+                        headerName: 'Actions',
+                        minWidth: 170,
+                        pinned: 'right',
+                        cellRenderer: function(params) {
+                            const container = document.createElement('span');
+                            const editBtn = document.createElement('button');
+                            editBtn.textContent = 'Edit';
+                            editBtn.className = 'btn btn-sm btn-outline-primary me-2';
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.textContent = 'Delete';
+                            deleteBtn.className = 'btn btn-sm btn-outline-danger';
+                            editBtn.addEventListener('click', function() {
+                                editCourse(params.data);
+                            });
+                            deleteBtn.addEventListener('click', function() {
+                                deleteCourse(params.data.id);
+                            });
+                            container.appendChild(editBtn);
+                            container.appendChild(deleteBtn);
+                            return container;
+                        }
+                    });
+                }
+                const gridDiv = document.getElementById('courseGrid');
+                gridDiv.innerHTML = '';
+                agGrid.createGrid(gridDiv, {
+                    columnDefs: columnDefs,
+                    rowData: rowData,
+                    defaultColDef: {
+                        sortable: true,
+                        filter: true,
+                        resizable: true
+                    },
+                    rowHeight: 44,
+                    headerHeight: 58,
+                    onFirstDataRendered: function(params) {
+                        params.api.sizeColumnsToFit();
+                    }
+                });
+            });
+        }
+
+        function editCourse(data) {
+            $('#courseId').val(data.id);
+            $('#courseName').val(data.name);
+            $('#courseDescription').val(data.description);
+            $('#courseSubmitBtn').text('Update Course');
+        }
+
+        function deleteCourse(id) {
+            if (!confirm('Delete this course?')) return;
+            $.ajax({
+                url: `/courses/delete/${id}`,
+                method: 'DELETE',
+                success: function() {
+                    alert('Course deleted');
+                    loadCourses();
+                    resetForm();
+                },
+                error: function(xhr) {
+                    alert('Delete failed: ' + (xhr.responseText || 'Unknown error'));
+                }
+            });
+        }
+
+        function resetForm() {
+            $('#courseId').val('');
+            $('#courseName').val('');
+            $('#courseDescription').val('');
+            $('#courseSubmitBtn').text('Add Course');
+            $('#courseForm')[0].reset();
+        }
+    </script>
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a href="/dashboard.html">Dashboard</a></li>
+        <li><a href="/students.html">Students</a></li>
+        <li><a href="/teachers.html">Teachers</a></li>
+        <li><a href="/courses.html">Courses</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+    </ul>
+</nav>
+
+<main>
+    <h2 id="pageTitle" class="mb-4">Manage Courses</h2>
+
+    <section id="insertBlock" class="d-none mb-4">
+        <form id="courseForm" class="p-3 border rounded bg-white shadow-sm">
+            <div class="mb-3">
+                <label for="courseName" class="form-label">Course Name *</label>
+                <input type="text" id="courseName" class="form-control" placeholder="Enter course name" required>
+            </div>
+            <div class="mb-3">
+                <label for="courseDescription" class="form-label">Course Description *</label>
+                <input type="text" id="courseDescription" class="form-control" placeholder="Enter course description" required>
+            </div>
+            <input type="hidden" id="courseId">
+            <button type="submit" id="courseSubmitBtn" class="btn btn-primary me-2">Add Course</button>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancel</button>
+        </form>
+    </section>
+
+    <div id="courseGrid" class="ag-theme-alpine" style="height: 500px;"></div>
+</main>
+
+<!-- Add this dialog HTML inside <body> (e.g., after <main>) in students.html, teachers.html, and courses.html -->
+<div id="validationAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 1050;">
+    <strong>Error:</strong> <span id="validationAlertMessage"></span>
+    <button type="button" class="btn-close" id="validationAlertClose" aria-label="Close"></button>
+</div>
+
+
+<footer>
+    © 2025 Student Management System
+</footer>
+</body>
+</html>

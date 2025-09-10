@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Student Management</title>
+    <link rel="stylesheet" href="/css/shared.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/js/shared.js"></script>
+    <script>
+        $(document).ready(function () {
+            fetchRole(function() {
+                updateDashboardText();
+            });
+        });
+
+        function updateDashboardText() {
+            const actionText = (window.currentRole === 'ADMIN') ? 'Manage' : 'View';
+            const descText = (window.currentRole === 'ADMIN') ? 'View, add, update, or delete' : 'View';
+
+            document.querySelector('#student-card h3').textContent = `${actionText} Students`;
+            document.querySelector('#student-card p').textContent = `${descText} student records.`;
+
+            document.querySelector('#teacher-card h3').textContent = `${actionText} Teachers`;
+            document.querySelector('#teacher-card p').textContent = `${descText} teacher records.`;
+
+            document.querySelector('#course-card h3').textContent = `${actionText} Courses`;
+            document.querySelector('#course-card p').textContent = `${descText} course records.`;
+        }
+    </script>
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a href="/dashboard.html">Dashboard</a></li>
+        <li><a href="/students.html">Students</a></li>
+        <li><a href="/teachers.html">Teachers</a></li>
+        <li><a href="/courses.html">Courses</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+    </ul>
+</nav>
+<main>
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Welcome to Student Management System</h1>
+        <p>Your all-in-one platform to manage students, teachers, and courses efficiently.</p>
+        <button onclick="window.location.href='/students.html'">Get Started</button>
+    </section>
+
+    <!-- Feature Cards -->
+    <div class="card-container">
+        <div id="student-card" class="card">
+            <h3>Manage Students</h3>
+            <p>View, add, update, or delete student records.</p>
+            <a href="/students.html">Go to Students</a>
+        </div>
+        <div id="teacher-card" class="card">
+            <h3>Manage Teachers</h3>
+            <p>View, add, update, or delete teacher records.</p>
+            <a href="/teachers.html">Go to Teachers</a>
+        </div>
+        <div id="course-card" class="card">
+            <h3>Manage Courses</h3>
+            <p>View, add, update, or delete course records.</p>
+            <a href="/courses.html">Go to Courses</a>
+        </div>
+    </div>
+</main>
+<footer>
+    © 2025 Student Management System. All rights reserved.
+</footer>
+</body>
+</html>
