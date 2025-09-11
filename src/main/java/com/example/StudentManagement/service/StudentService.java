@@ -10,24 +10,25 @@ import java.util.List;
 
 @Service
 public class StudentService {
-
     @Autowired
     private StudentDao studentDao;
-@Transactional
-    public void addStudent(Student student) {
-        studentDao.addStudent(student);
-    }
-@Transactional
-    public List<Object[]> getStudents() {
-        return studentDao.getStudents();
-    }
-    @Transactional
 
+    @Transactional
+    public void addStudent(Student student) {
+        studentDao.addStudent(student);  // Now passes Student with courseId
+    }
+
+    @Transactional
+    public List<Object[]> getStudents() {
+        return studentDao.getStudents();  // Returns with course_name and course_id
+    }
+
+    @Transactional
     public void updateStudent(Student student) {
         studentDao.updateStudent(student);
     }
-    @Transactional
 
+    @Transactional
     public void deleteStudent(int roll) {
         studentDao.deleteStudent(roll);
     }

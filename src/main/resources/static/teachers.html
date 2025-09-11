@@ -5,6 +5,30 @@
     <title>Teachers - Student Management</title>
     <link rel="stylesheet" href="/css/shared.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Custom styles for datalist suggestions */
+        datalist {
+            position: absolute;
+            background-color: #f8f9fa; /* Light background */
+            border: 1px solid #ced4da; /* Border to match Bootstrap */
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%; /* Match input width */
+            z-index: 1000; /* Ensure it overlays */
+        }
+        datalist option {
+            padding: 8px 12px; /* Padding for better touch */
+            color: #007bff; /* Blue text for distinction */
+            cursor: pointer;
+            font-style: italic; /* Italic to look different */
+        }
+        datalist option:hover,
+        datalist option:focus {
+            background-color: #e9ecef; /* Hover background */
+            color: #0056b3; /* Darker blue on hover */
+        }
+    </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
     <script src="/js/shared.js"></script>
@@ -18,15 +42,19 @@
         });
 
         function toggleAdminBits() {
-            if (window.currentRole === 'ADMIN') $('#insertBlock').removeClass('d-none');
-            else $('#insertBlock').addClass('d-none');
-
+            if (window.currentRole === 'ADMIN') {
+                $('#insertBlock').removeClass('d-none');
+                setupCourseAutocomplete('#teacherCourseName', '#teacherCourseId');
+            } else {
+                $('#insertBlock').addClass('d-none');
+            }
             $('#pageTitle').text(window.currentRole === 'ADMIN' ? 'Manage Teachers' : 'View Teachers');
         }
 
         function resetForm() {
             $('#teacherForm')[0].reset();
             $('#teacherId').val('');
+            $('#teacherCourseId').val('');
             $('#teacherSubmitBtn').text('Add Teacher');
         }
 
@@ -35,10 +63,17 @@
                 id: $('#teacherId').val(),
                 name: $('#teacherName').val().trim(),
                 email: $('#teacherEmail').val().trim(),
-                subject: $('#teacherSubject').val().trim()
+                courseId: $('#teacherCourseId').val()
             };
 
-            if (!data.name || !data.email || !data.subject) { alert('All fields are required'); return; }
+            if (!data.name || !data.email) {
+                alert('Name and email are required');
+                return;
+            }
+            if (!data.courseId) {
+                alert('Please select a valid course from the suggestions');
+                return;
+            }
 
             $.ajax({
                 url: data.id ? '/teachers/update' : '/teachers/add',
@@ -53,14 +88,14 @@
         function loadTeachers() {
             $.get('/teachers/all', rows => {
                 const rowData = rows.map(r => ({
-                    id: r[0], name: r[1], email: r[2], subject: r[3]
+                    id: r[0], name: r[1], email: r[2], course_name: r[3], courseId: r[4]
                 }));
 
                 const cols = [
                     {headerName:'ID', field:'id', width:110, filter:'agNumberColumnFilter'},
                     {headerName:'Name', field:'name', flex:1, filter:'agTextColumnFilter'},
                     {headerName:'Email', field:'email', flex:1, filter:'agTextColumnFilter'},
-                    {headerName:'Subject', field:'subject', flex:1, filter:'agTextColumnFilter'}
+                    {headerName:'Course', field:'course_name', flex:1, filter:'agTextColumnFilter'}
                 ];
 
                 if (window.currentRole === 'ADMIN') cols.push({
@@ -91,7 +126,8 @@
             $('#teacherId').val(row.id);
             $('#teacherName').val(row.name);
             $('#teacherEmail').val(row.email);
-            $('#teacherSubject').val(row.subject);
+            $('#teacherCourseName').val(row.course_name);
+            $('#teacherCourseId').val(row.courseId);
             $('#teacherSubmitBtn').text('Update Teacher');
             window.scrollTo({top:0,behavior:'smooth'});
         }
@@ -133,8 +169,10 @@
                     <input id="teacherEmail" type="email" class="form-control" placeholder="email@site.com" required>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Subject *</label>
-                    <input id="teacherSubject" type="text" class="form-control" placeholder="Subject name" required>
+                    <label class="form-label">Course *</label>
+                    <input id="teacherCourseName" type="text" class="form-control" placeholder="Type to search course" required>
+                    <input id="teacherCourseId" type="hidden">
+                    <small class="form-text text-muted">Select from suggestions or type to match.</small>
                 </div>
             </div>
 

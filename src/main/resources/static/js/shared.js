@@ -85,5 +85,22 @@ if (window.sharedLoaded) {
         });
     }
 
+    function setupCourseAutocomplete(inputId, hiddenId) {
+        $.get('/courses/suggestions', function(courses) {
+            const datalist = $('<datalist id="courseSuggestions"></datalist>');
+            courses.forEach(c => datalist.append(`<option value="${c[1]}" data-id="${c[0]}">${c[1]}</option>`));  // c[1]=name, c[0]=id
+            $('body').append(datalist);
+            $(inputId).attr('list', 'courseSuggestions');
+
+            // Set hidden ID on selection
+            $(inputId).on('input', function() {
+                const val = $(this).val();
+                const option = $(`#courseSuggestions option[value="${val}"]`);
+                $(hiddenId).val(option.length ? option.data('id') : '');
+            });
+        }).fail(() => alert('Failed to load course suggestions.'));
+    }
+
+
     console.log('shared.js loaded successfully');
 }

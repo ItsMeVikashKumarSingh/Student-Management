@@ -1,6 +1,8 @@
 package com.example.StudentManagement.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "studenttable")
@@ -10,19 +12,23 @@ public class Student {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer roll;
 
+    @NotBlank
     private String name;
+    @NotBlank
     private String email;
+    @NotNull
     private Integer age;
-    private String course;
+    @NotNull
+    private Integer courseId;
 
     public Student() {}
 
-    public Student(Integer roll, String name, String email, Integer age, String course) {
+    public Student(Integer roll, String name, String email, Integer age, Integer courseId) {
         this.roll = roll;
         this.name = name;
         this.email = email;
         this.age = age;
-        this.course = course;
+        this.courseId = courseId;
     }
 
     // getters & setters
@@ -51,10 +57,12 @@ public class Student {
     public void setAge(Integer age) {
         this.age = age;
     }
-    public String getCourse() {
-        return course;
+
+    public Integer getCourseId() {
+        return courseId;
     }
-    public void setCourse(String course) {
-        this.course = course;
+
+    public void setCourseId(Integer courseId) {
+        this.courseId = courseId;
     }
 }

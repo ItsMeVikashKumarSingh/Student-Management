@@ -20,13 +20,13 @@ public class StudentDao {
         query.registerStoredProcedureParameter("p_name", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_age", Integer.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_course", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_course_id", Integer.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_roll", Integer.class, ParameterMode.OUT);
 
         query.setParameter("p_name", student.getName());
         query.setParameter("p_email", student.getEmail());
         query.setParameter("p_age", student.getAge());
-        query.setParameter("p_course", student.getCourse());
+        query.setParameter("p_course_id", student.getCourseId());
 
         query.execute();
 
@@ -46,13 +46,13 @@ public class StudentDao {
         query.registerStoredProcedureParameter("p_name", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_age", Integer.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_course", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_course_id", Integer.class, ParameterMode.IN);
 
         query.setParameter("p_roll", student.getRoll());
         query.setParameter("p_name", student.getName());
         query.setParameter("p_email", student.getEmail());
         query.setParameter("p_age", student.getAge());
-        query.setParameter("p_course", student.getCourse());
+        query.setParameter("p_course_id", student.getCourseId());
 
         query.execute();
     }

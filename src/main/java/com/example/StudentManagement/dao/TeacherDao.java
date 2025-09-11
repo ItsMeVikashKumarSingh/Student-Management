@@ -19,12 +19,12 @@ public class TeacherDao {
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("sp_add_teacher");
         query.registerStoredProcedureParameter("p_name", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_subject", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_course_id", Integer.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_id", Integer.class, ParameterMode.OUT);
 
         query.setParameter("p_name", teacher.getName());
         query.setParameter("p_email", teacher.getEmail());
-        query.setParameter("p_subject", teacher.getSubject());
+        query.setParameter("p_course_id", teacher.getCourseId());
 
         query.execute();
 
@@ -43,12 +43,12 @@ public class TeacherDao {
         query.registerStoredProcedureParameter("p_id", Integer.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_name", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_subject", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_course_id", Integer.class, ParameterMode.IN);
 
         query.setParameter("p_id", teacher.getId());
         query.setParameter("p_name", teacher.getName());
         query.setParameter("p_email", teacher.getEmail());
-        query.setParameter("p_subject", teacher.getSubject());
+        query.setParameter("p_course_id", teacher.getCourseId());
 
         query.execute();
     }

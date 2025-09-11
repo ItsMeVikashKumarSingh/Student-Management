@@ -36,4 +36,10 @@ public class CourseController {
         courseService.deleteCourse(id);
         return "Course deleted successfully!";
     }
+
+    @GetMapping("/suggestions")
+    public List<Object[]> getCourseSuggestions() {
+        return courseService.getCourses();  // Returns [id, name, description]
+    }
+
 }
