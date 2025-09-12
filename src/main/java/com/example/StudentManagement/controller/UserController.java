@@ -2,9 +2,7 @@ package com.example.StudentManagement.controller;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,8 +19,7 @@ public class UserController {
                 .filter(auth -> auth.startsWith("ROLE_"))
                 .findFirst()
                 .orElse("UNKNOWN")
-                .replace("ROLE_", "");  // e.g., "ADMIN" or "USER"
-
+                .replace("ROLE_", "");
         Map<String, String> response = new HashMap<>();
         response.put("role", role);
         return response;

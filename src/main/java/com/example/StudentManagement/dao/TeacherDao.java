@@ -1,10 +1,8 @@
 package com.example.StudentManagement.dao;
 
 import com.example.StudentManagement.entity.Teacher;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.ParameterMode;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.StoredProcedureQuery;
+import com.example.StudentManagement.util.StoredProcClient;
+import com.example.StudentManagement.util.SpEnums.EntityType;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,53 +10,17 @@ import java.util.List;
 @Repository
 public class TeacherDao {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final StoredProcClient sp;
 
-    public Teacher addTeacher(Teacher teacher) {
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("sp_add_teacher");
-        query.registerStoredProcedureParameter("p_name", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_course_id", Integer.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_id", Integer.class, ParameterMode.OUT);
+    public TeacherDao(StoredProcClient sp) { this.sp = sp; }
 
-        query.setParameter("p_name", teacher.getName());
-        query.setParameter("p_email", teacher.getEmail());
-        query.setParameter("p_course_id", teacher.getCourseId());
+    public Integer add(Teacher t) { return sp.add(EntityType.TEACHER, t); }
 
-        query.execute();
+    public void update(Teacher t) { sp.update(EntityType.TEACHER, t); }
 
-        Integer newId = (Integer) query.getOutputParameterValue("p_id");
-        teacher.setId(newId);
-        return teacher;
-    }
+    public void delete(int id) { sp.deleteById(EntityType.TEACHER, id); }
 
-    public List<Object[]> getTeachers() {
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("sp_get_teachers");
-        return query.getResultList();
-    }
+    public String getPictureName(int id) { return sp.getPicNameById(EntityType.TEACHER, id); }
 
-    public void updateTeacher(Teacher teacher) {
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("sp_update_teacher");
-        query.registerStoredProcedureParameter("p_id", Integer.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_name", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_course_id", Integer.class, ParameterMode.IN);
-
-        query.setParameter("p_id", teacher.getId());
-        query.setParameter("p_name", teacher.getName());
-        query.setParameter("p_email", teacher.getEmail());
-        query.setParameter("p_course_id", teacher.getCourseId());
-
-        query.execute();
-    }
-
-    public void deleteTeacher(int id) {
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("sp_delete_teacher");
-        query.registerStoredProcedureParameter("p_id", Integer.class, ParameterMode.IN);
-
-        query.setParameter("p_id", id);
-
-        query.execute();
-    }
+    public List<Object[]> list() { return sp.list(EntityType.TEACHER); }
 }

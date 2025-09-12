@@ -1,152 +1,137 @@
+<!-- students.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Students · Student Management</title>
-    <!-- Styles -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Students - Student Management</title>
     <link rel="stylesheet" href="/css/shared.css">
-    <style>
-        /* Custom styles for datalist suggestions */
-        datalist {
-            position: absolute;
-            background-color: #f8f9fa; /* Light background */
-            border: 1px solid #ced4da; /* Border to match Bootstrap */
-            border-top: none;
-            max-height: 200px;
-            overflow-y: auto;
-            width: 100%; /* Match input width */
-            z-index: 1000; /* Ensure it overlays */
-        }
-        datalist option {
-            padding: 8px 12px; /* Padding for better touch */
-            color: #007bff; /* Blue text for distinction */
-            cursor: pointer;
-            font-style: italic; /* Italic to look different */
-        }
-        datalist option:hover,
-        datalist option:focus {
-            background-color: #e9ecef; /* Hover background */
-            color: #0056b3; /* Darker blue on hover */
-        }
-    </style>
-    <!-- Scripts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
     <script src="/js/shared.js"></script>
     <script>
-        /* ---------- PAGE BOOT ---------- */
-        $(document).ready(() => {
-            fetchRole(() => {
+        $(document).ready(function() {
+            fetchRole(function() {
                 toggleAdminBits();
                 loadStudents();
             });
-            $('#studentForm').on('submit', e => { e.preventDefault(); saveStudent(); });
+            $('#studentForm').on('submit', function(e) {
+                e.preventDefault();
+                saveStudent();
+            });
+            $('#studentProfile').on('change', function() {
+                const f = this.files[0];
+                if (f) {
+                    const reader = new FileReader();
+                    reader.onload = e => $('#studentPreview').attr('src', e.target.result).show();
+                    reader.readAsDataURL(f);
+                }
+            });
         });
-        /* ---------- UI HELPERS ---------- */
-        function toggleAdminBits () {
-            // show form only for admins
+
+        function toggleAdminBits() {
             if (window.currentRole === 'ADMIN') {
                 $('#insertBlock').removeClass('d-none');
                 setupCourseAutocomplete('#studentCourseName', '#studentCourseId');
             } else {
                 $('#insertBlock').addClass('d-none');
             }
-            // title
-            $('#pageTitle').text(window.currentRole === 'ADMIN' ? 'Manage Students' : 'View Students');
+            $('#pageTitle').text((window.currentRole === 'ADMIN' ? 'Manage' : 'View') + ' Students');
         }
-        function resetForm () {
-            $('#studentForm')[0].reset();
-            $('#studentRoll').val('');
-            $('#studentCourseId').val('');
-            $('#studentSubmitBtn').text('Add Student');
-        }
-        /* ---------- CRUD CALLS ---------- */
-        function saveStudent () {
-            const data = {
-                roll:   $('#studentRoll').val(),
-                name:   $('#studentName').val().trim(),
-                email:  $('#studentEmail').val().trim(),
-                age:    $('#studentAge').val(),
-                courseId: $('#studentCourseId').val()
-            };
-            /* improved validation */
-            if (!data.name || !data.email || !data.age) {
-                alert('Name, email, and age are required');
-                return;
-            }
-            if (!data.courseId) {
-                alert('Please select a valid course from the suggestions');
-                return;
-            }
+
+        function saveStudent() {
+            const fd = new FormData();
+            const roll = $('#studentRoll').val();
+            if (roll) fd.append('roll', roll);
+            fd.append('name', $('#studentName').val().trim());
+            fd.append('email', $('#studentEmail').val().trim());
+            fd.append('age', $('#studentAge').val());
+            fd.append('courseId', $('#studentCourseId').val());
+            const file = $('#studentProfile')[0].files[0];
+            if (file) fd.append('profilePicture', file);
+            const url = roll ? '/students/update' : '/students/add';
+            const method = roll ? 'PUT' : 'POST';
             $.ajax({
-                url:        data.roll ? '/students/update' : '/students/add',
-                method:     data.roll ? 'PUT' : 'POST',
-                contentType:'application/json',
-                data:       JSON.stringify(data),
-                success:    () => { resetForm(); loadStudents(); },
-                error:      err => alert(err.responseText || 'Server error')
+                url, method, data: fd, processData: false, contentType: false,
+                success: () => { resetForm(); loadStudents(); },
+                error: err => alert(err.responseText || 'Server error')
             });
         }
-        function loadStudents () {
+
+        function loadStudents() {
             $.get('/students/all', rows => {
                 const rowData = rows.map(r => ({
-                    roll:   r[0], name: r[1], email: r[2], age: r[3], course_name: r[4], courseId: r[5]
+                    roll: r[0], name: r[1], email: r[2], age: r[3], course_name: r[4], courseId: r[5], profile_picture_name: r[6]
                 }));
                 const cols = [
-                    {headerName:'Roll',   field:'roll', width:110, filter:'agNumberColumnFilter'},
-                    {headerName:'Name',   field:'name', flex:1, filter:'agTextColumnFilter'},
-                    {headerName:'Email',  field:'email', flex:1, filter:'agTextColumnFilter'},
-                    {headerName:'Age',    field:'age',  width:110, filter:'agNumberColumnFilter'},
+                    {headerName:'Avatar', width:90, pinned:'left',
+                        cellRenderer: p => {
+                            const file = p.data.profile_picture_name;
+                            if (!file) return '';
+                            const img = document.createElement('img');
+                            img.src = `/image/StudentPic/${file}`;
+                            img.style = 'width:36px; height:36px; border-radius:50%; object-fit:cover;';
+                            return img;
+                        }},
+                    {headerName:'Roll', field:'roll', width:110, filter:'agNumberColumnFilter'},
+                    {headerName:'Name', field:'name', flex:1, filter:'agTextColumnFilter'},
+                    {headerName:'Email', field:'email', flex:1, filter:'agTextColumnFilter'},
+                    {headerName:'Age', field:'age', width:110, filter:'agNumberColumnFilter'},
                     {headerName:'Course', field:'course_name', flex:1, filter:'agTextColumnFilter'}
                 ];
-                /* action buttons for admins */
                 if (window.currentRole === 'ADMIN') cols.push({
-                    headerName:'Actions',
-                    minWidth:170, pinned:'right',
+                    headerName:'Actions', minWidth:170, pinned:'right',
                     cellRenderer: p => {
                         const wrap = document.createElement('span');
-                        const eBtn = $('<button class="btn btn-sm btn-outline-primary me-2">Edit</button>')
-                            .on('click', () => editRow(p.data));
-                        const dBtn = $('<button class="btn btn-sm btn-outline-danger">Delete</button>')
-                            .on('click', () => delRow(p.data.roll));
+                        const eBtn = $('<button class="btn btn-sm btn-outline-primary me-2">Edit</button>').on('click', () => editRow(p.data));
+                        const dBtn = $('<button class="btn btn-sm btn-outline-danger">Delete</button>').on('click', () => delRow(p.data.roll));
                         wrap.appendChild(eBtn[0]); wrap.appendChild(dBtn[0]);
                         return wrap;
                     }
                 });
                 const gridDiv = document.getElementById('studentGrid');
-                gridDiv.innerHTML = '';                    // clear previous grid
+                gridDiv.innerHTML = '';
                 agGrid.createGrid(gridDiv, {
                     columnDefs: cols,
                     rowData,
-                    defaultColDef:{sortable:true,resizable:true,filter:true},
-                    rowHeight:44, headerHeight:58,
-                    onFirstDataRendered:e=>e.api.sizeColumnsToFit()
+                    defaultColDef: {sortable: true, resizable: true, filter: true},
+                    rowHeight: 44, headerHeight: 58,
+                    onFirstDataRendered: e => e.api.sizeColumnsToFit()
                 });
-            });
+            }).fail(() => alert('Failed to load students data.'));
         }
-        function editRow (row) {
+
+        function editRow(row) {
             $('#studentRoll').val(row.roll);
             $('#studentName').val(row.name);
             $('#studentEmail').val(row.email);
             $('#studentAge').val(row.age);
             $('#studentCourseName').val(row.course_name);
             $('#studentCourseId').val(row.courseId);
+            $('#studentPreview').attr('src', row.profile_picture_name ? `/image/StudentPic/${row.profile_picture_name}` : '').show();
             $('#studentSubmitBtn').text('Update Student');
-            window.scrollTo({top:0,behavior:'smooth'});
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
-        function delRow (id) {
+
+        function delRow(id) {
             if (!confirm('Delete this student?')) return;
             $.ajax({
-                url:`/students/delete/${id}`, method:'DELETE',
-                success:() => loadStudents(),
-                error:err => alert(err.responseText || 'Delete failed')
+                url: `/students/delete/${id}`, method: 'DELETE',
+                success: () => loadStudents(),
+                error: err => alert(err.responseText || 'Delete failed')
             });
+        }
+
+        function resetForm() {
+            $('#studentForm')[0].reset();
+            $('#studentRoll').val('');
+            $('#studentCourseId').val('');
+            $('#studentPreview').attr('src', '').hide();
+            $('#studentSubmitBtn').text('Add Student');
         }
     </script>
 </head>
 <body>
-<!-- NAV -->
 <nav>
     <ul>
         <li><a href="/dashboard.html">Dashboard</a></li>
@@ -156,12 +141,17 @@
         <li><a href="#" onclick="logout()">Logout</a></li>
     </ul>
 </nav>
-<!-- MAIN -->
 <main>
     <h2 id="pageTitle" class="mb-4">Manage Students</h2>
-    <!-- INSERT / UPDATE FORM (hidden for users) -->
     <section id="insertBlock" class="d-none mb-4">
         <form id="studentForm" class="p-3 border rounded bg-white shadow-sm">
+            <div class="mb-3 text-center">
+                <img id="studentPreview" src="" alt="Preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:none;">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Profile Picture (JPG/PNG, ≤ 5 MB)</label>
+                <input id="studentProfile" type="file" class="form-control" accept="image/jpeg,image/png">
+            </div>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Name *</label>
@@ -189,14 +179,8 @@
             </div>
         </form>
     </section>
-    <!-- GRID -->
-    <div id="studentGrid" class="ag-theme-alpine"></div>
+    <div id="studentGrid" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
 </main>
-<!-- Add this dialog HTML inside <body> (e.g., after <main>) in students.html, teachers.html, and courses.html -->
-<div id="validationAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 1050;">
-    <strong>Error:</strong> <span id="validationAlertMessage"></span>
-    <button type="button" class="btn-close" id="validationAlertClose" aria-label="Close"></button>
-</div>
 <footer>© 2025 Student Management System</footer>
 </body>
 </html>

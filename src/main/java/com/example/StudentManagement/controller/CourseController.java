@@ -2,7 +2,6 @@ package com.example.StudentManagement.controller;
 
 import com.example.StudentManagement.entity.Course;
 import com.example.StudentManagement.service.CourseService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,8 +10,11 @@ import java.util.List;
 @RequestMapping("/courses")
 public class CourseController {
 
-    @Autowired
-    private CourseService courseService;
+    private final CourseService courseService;
+
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
+    }
 
     @PostMapping("/add")
     public String addCourse(@RequestBody Course course) {
@@ -39,7 +41,6 @@ public class CourseController {
 
     @GetMapping("/suggestions")
     public List<Object[]> getCourseSuggestions() {
-        return courseService.getCourses();  // Returns [id, name, description]
+        return courseService.getCourses();
     }
-
 }

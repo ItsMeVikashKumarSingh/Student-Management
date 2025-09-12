@@ -1,4 +1,4 @@
-/* Global resets and theme */
+/* shared.css */
 body {
     margin: 0;
     font-family: Arial, sans-serif;
@@ -17,22 +17,20 @@ main {
     width: 100%;
 }
 
-/* Remove number input spinners in Chrome, Safari, Edge, Opera */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
-/* Remove spinners in Firefox */
+
 input[type=number] {
     -moz-appearance: textfield;
 }
 
-/* Navigation bar */
 nav {
     background-color: #007bff;
     padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 nav ul {
@@ -60,7 +58,6 @@ nav a:hover {
     background-color: #0056b3;
 }
 
-/* Hero section for landing page */
 .hero {
     background: linear-gradient(to right, #007bff, #00c6ff);
     color: white;
@@ -95,7 +92,6 @@ nav a:hover {
     background-color: #e9ecef;
 }
 
-/* Card layout */
 .card-container {
     display: flex;
     justify-content: space-around;
@@ -107,7 +103,7 @@ nav a:hover {
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     width: 300px;
     padding: 20px;
     margin: 10px;
@@ -138,12 +134,11 @@ nav a:hover {
     background-color: #0056b3;
 }
 
-/* Form styles */
 form {
     background-color: white;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     margin-bottom: 20px;
 }
 
@@ -153,7 +148,7 @@ form label {
     font-weight: bold;
 }
 
-form input {
+form input, form select {
     width: 100%;
     padding: 8px;
     margin-bottom: 10px;
@@ -174,13 +169,11 @@ form button:hover {
     background-color: #218838;
 }
 
-/* AG Grid container */
 .ag-theme-alpine {
     height: 500px;
     width: 100%;
 }
 
-/* Footer */
 footer {
     text-align: center;
     padding: 10px;
@@ -188,4 +181,19 @@ footer {
     border-top: 1px solid #ddd;
     font-size: 14px;
     color: #666;
+}
+
+.preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: none;
+}
+
+.grid-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
 }

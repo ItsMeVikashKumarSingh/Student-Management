@@ -2,6 +2,7 @@ package com.example.StudentManagement.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -31,9 +32,10 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/", "/error", "/static/**", "/login**", "/css/**", "/js/**").permitAll()
+                        .requestMatchers("/image/**").permitAll() // serve uploaded images publicly
                         .requestMatchers("/dashboard.html", "/students.html", "/teachers.html", "/courses.html").authenticated()
                         .requestMatchers("/api/current-role").authenticated()
-                        .requestMatchers("/students/all", "/teachers/all", "/courses/all").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/students/all", "/teachers/all", "/courses/all","/courses/suggestions").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/students/add", "/students/update", "/students/delete/**",
                                 "/teachers/add", "/teachers/update", "/teachers/delete/**",
                                 "/courses/add", "/courses/update", "/courses/delete/**").hasRole("ADMIN")
@@ -43,6 +45,7 @@ public class SecurityConfig {
                         .successHandler(customSuccessHandler())
                         .permitAll()
                 )
+//                .httpBasic(Customizer.withDefaults())
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login")

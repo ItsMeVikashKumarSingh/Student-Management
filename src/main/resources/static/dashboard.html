@@ -1,3 +1,4 @@
+<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,21 +9,15 @@
     <script src="/js/shared.js"></script>
     <script>
         $(document).ready(function () {
-            fetchRole(function() {
-                updateDashboardText();
-            });
+            fetchRole(updateDashboardText);
         });
-
         function updateDashboardText() {
             const actionText = (window.currentRole === 'ADMIN') ? 'Manage' : 'View';
             const descText = (window.currentRole === 'ADMIN') ? 'View, add, update, or delete' : 'View';
-
             document.querySelector('#student-card h3').textContent = `${actionText} Students`;
             document.querySelector('#student-card p').textContent = `${descText} student records.`;
-
             document.querySelector('#teacher-card h3').textContent = `${actionText} Teachers`;
             document.querySelector('#teacher-card p').textContent = `${descText} teacher records.`;
-
             document.querySelector('#course-card h3').textContent = `${actionText} Courses`;
             document.querySelector('#course-card p').textContent = `${descText} course records.`;
         }
@@ -39,14 +34,11 @@
     </ul>
 </nav>
 <main>
-    <!-- Hero Section -->
     <section class="hero">
         <h1>Welcome to Student Management System</h1>
         <p>Your all-in-one platform to manage students, teachers, and courses efficiently.</p>
         <button onclick="window.location.href='/students.html'">Get Started</button>
     </section>
-
-    <!-- Feature Cards -->
     <div class="card-container">
         <div id="student-card" class="card">
             <h3>Manage Students</h3>
@@ -65,8 +57,6 @@
         </div>
     </div>
 </main>
-<footer>
-    © 2025 Student Management System. All rights reserved.
-</footer>
+<footer>© 2025 Student Management System. All rights reserved.</footer>
 </body>
 </html>
