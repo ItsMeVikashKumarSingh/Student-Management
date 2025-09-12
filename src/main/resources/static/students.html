@@ -1,4 +1,3 @@
-<!-- students.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,22 +9,35 @@
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
     <script src="/js/shared.js"></script>
     <script>
+        const DEFAULT_IMG = '/images/default_profile_pic.jpg';
+
         $(document).ready(function() {
             fetchRole(function() {
                 toggleAdminBits();
                 loadStudents();
             });
+
             $('#studentForm').on('submit', function(e) {
                 e.preventDefault();
                 saveStudent();
             });
+
             $('#studentProfile').on('change', function() {
                 const f = this.files[0];
                 if (f) {
                     const reader = new FileReader();
                     reader.onload = e => $('#studentPreview').attr('src', e.target.result).show();
                     reader.readAsDataURL(f);
+                    $('#removeImage').show();
+                    window.removePicture = false; // user selected a new file
                 }
+            });
+
+            $('#removeImage').on('click', function() {
+                $('#studentProfile').val('');
+                $('#studentPreview').attr('src', '').hide();
+                $('#removeImage').hide();
+                window.removePicture = true; // ask backend to remove current picture
             });
         });
 
@@ -49,27 +61,36 @@
             fd.append('courseId', $('#studentCourseId').val());
             const file = $('#studentProfile')[0].files[0];
             if (file) fd.append('profilePicture', file);
+            if (window.removePicture) fd.append('removePicture', 'true');
+
             const url = roll ? '/students/update' : '/students/add';
             const method = roll ? 'PUT' : 'POST';
+
             $.ajax({
                 url, method, data: fd, processData: false, contentType: false,
                 success: () => { resetForm(); loadStudents(); },
-                error: err => alert(err.responseText || 'Server error')
+                error: err => {
+                    console.error('Student save error:', err);
+                    alert(err.responseText || 'Server error');
+                }
             });
         }
 
         function loadStudents() {
             $.get('/students/all', rows => {
                 const rowData = rows.map(r => ({
-                    roll: r[0], name: r[1], email: r[2], age: r[3], course_name: r[4], courseId: r[5], profile_picture_name: r[6]
+                    roll: r[0], name: r[1], email: r[2], age: r[3],
+                    course_name: r[4], courseId: r[5], profile_picture_name: r[6]
                 }));
+
                 const cols = [
                     {headerName:'Avatar', width:90, pinned:'left',
                         cellRenderer: p => {
                             const file = p.data.profile_picture_name;
-                            if (!file) return '';
+                            const src = file ? `/image/StudentPic/${file}` : DEFAULT_IMG;
                             const img = document.createElement('img');
-                            img.src = `/image/StudentPic/${file}`;
+                            img.src = src;
+                            img.alt = 'avatar';
                             img.style = 'width:36px; height:36px; border-radius:50%; object-fit:cover;';
                             return img;
                         }},
@@ -79,6 +100,7 @@
                     {headerName:'Age', field:'age', width:110, filter:'agNumberColumnFilter'},
                     {headerName:'Course', field:'course_name', flex:1, filter:'agTextColumnFilter'}
                 ];
+
                 if (window.currentRole === 'ADMIN') cols.push({
                     headerName:'Actions', minWidth:170, pinned:'right',
                     cellRenderer: p => {
@@ -89,6 +111,7 @@
                         return wrap;
                     }
                 });
+
                 const gridDiv = document.getElementById('studentGrid');
                 gridDiv.innerHTML = '';
                 agGrid.createGrid(gridDiv, {
@@ -108,9 +131,18 @@
             $('#studentAge').val(row.age);
             $('#studentCourseName').val(row.course_name);
             $('#studentCourseId').val(row.courseId);
-            $('#studentPreview').attr('src', row.profile_picture_name ? `/image/StudentPic/${row.profile_picture_name}` : '').show();
+
+            if (row.profile_picture_name) {
+                $('#studentPreview').attr('src', `/image/StudentPic/${row.profile_picture_name}`).show();
+                $('#removeImage').show();
+            } else {
+                $('#studentPreview').attr('src', '').hide();
+                $('#removeImage').hide();
+            }
+
             $('#studentSubmitBtn').text('Update Student');
             window.scrollTo({top: 0, behavior: 'smooth'});
+            window.removePicture = false;
         }
 
         function delRow(id) {
@@ -127,7 +159,9 @@
             $('#studentRoll').val('');
             $('#studentCourseId').val('');
             $('#studentPreview').attr('src', '').hide();
+            $('#removeImage').hide();
             $('#studentSubmitBtn').text('Add Student');
+            window.removePicture = false;
         }
     </script>
 </head>
@@ -147,9 +181,10 @@
         <form id="studentForm" class="p-3 border rounded bg-white shadow-sm">
             <div class="mb-3 text-center">
                 <img id="studentPreview" src="" alt="Preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:none;">
+                <button type="button" id="removeImage" style="display:none; background:red; color:white; border:none; border-radius:50%; position:relative; top:-20px; left:-30px;">X</button>
             </div>
             <div class="mb-3">
-                <label class="form-label">Profile Picture (JPG/PNG, ≤ 5 MB)</label>
+                <label class="form-label">Profile Picture (JPG/PNG, ≤ 5 MB, optional)</label>
                 <input id="studentProfile" type="file" class="form-control" accept="image/jpeg,image/png">
             </div>
             <div class="row g-3">

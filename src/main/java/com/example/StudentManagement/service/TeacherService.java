@@ -36,21 +36,33 @@ public class TeacherService {
     }
 
     @Transactional
-    public void updateTeacher(Teacher t, String picName, MultipartFile profilePicture) throws IOException {
-        if (profilePicture != null && !profilePicture.isEmpty()) {
-            String old = dao.getPictureName(t.getId());
+    public void updateTeacher(Teacher input, String picName, MultipartFile profilePicture, boolean removePicture) throws IOException {
+        Teacher existing = dao.getById(input.getId());
+
+        existing.setName(input.getName());
+        existing.setEmail(input.getEmail());
+        existing.setCourseId(input.getCourseId());
+
+        String old = existing.getProfilePictureName();
+
+        if (removePicture) {
             if (old != null) storage.deleteTeacherImage(old);
-            String finalName = storage.saveTeacherImage(t.getId(), picName, profilePicture);
-            t.setProfilePictureName(finalName);
+            existing.setProfilePictureName(null); // UI shows static default
+        } else if (profilePicture != null && !profilePicture.isEmpty()) {
+            if (old != null) storage.deleteTeacherImage(old);
+            String finalName = storage.saveTeacherImage(existing.getId(), picName, profilePicture);
+            existing.setProfilePictureName(finalName);
         }
-        dao.update(t);
+        // else keep old
+
+        dao.update(existing);
     }
 
     @Transactional
     public void deleteTeacher(int id) {
         String old = dao.getPictureName(id);
-        dao.delete(id);
         if (old != null) storage.deleteTeacherImage(old);
+        dao.delete(id);
     }
 
     @Transactional

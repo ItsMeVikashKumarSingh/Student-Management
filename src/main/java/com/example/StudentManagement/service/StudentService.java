@@ -23,12 +23,10 @@ public class StudentService {
 
     @Transactional
     public Integer addStudent(Student s, String picName, MultipartFile profilePicture) throws IOException {
-        // Insert first to get ID
         s.setProfilePictureName(null);
         Integer id = dao.add(s);
         s.setRoll(id);
 
-        // If image provided, save file and update only the picture field via UPDATE
         if (profilePicture != null && !profilePicture.isEmpty()) {
             String finalName = storage.saveStudentImage(id, picName, profilePicture);
             s.setProfilePictureName(finalName);
@@ -38,25 +36,39 @@ public class StudentService {
     }
 
     @Transactional
-    public void updateStudent(Student s, String picName, MultipartFile profilePicture) throws IOException {
-        if (profilePicture != null && !profilePicture.isEmpty()) {
-            String old = dao.getPictureName(s.getRoll());
+    public void updateStudent(Student input, String picName, MultipartFile profilePicture, boolean removePicture) throws IOException {
+        Student existing = dao.getById(input.getRoll());
+
+        existing.setName(input.getName());
+        existing.setEmail(input.getEmail());
+        existing.setAge(input.getAge());
+        existing.setCourseId(input.getCourseId());
+
+        String old = existing.getProfilePictureName();
+
+        if (removePicture) {
             if (old != null) storage.deleteStudentImage(old);
-            String finalName = storage.saveStudentImage(s.getRoll(), picName, profilePicture);
-            s.setProfilePictureName(finalName);
+            existing.setProfilePictureName(null);
+        } else if (profilePicture != null && !profilePicture.isEmpty()) {
+            if (old != null) storage.deleteStudentImage(old);
+            String finalName = storage.saveStudentImage(existing.getRoll(), picName, profilePicture);
+            existing.setProfilePictureName(finalName);
         }
-        dao.update(s);
+        // else keep old (null means UI shows static default)
+
+        dao.update(existing);
+    }
+
+    // Important: do NOT mark readOnly=true because MySQL driver may block CALL on read-only connections
+    @Transactional
+    public List<Object[]> getStudents() {
+        return dao.list();
     }
 
     @Transactional
     public void deleteStudent(int roll) {
         String old = dao.getPictureName(roll);
-        dao.delete(roll);
         if (old != null) storage.deleteStudentImage(old);
-    }
-
-    @Transactional
-    public List<Object[]> getStudents() {
-        return dao.list();
+        dao.delete(roll);
     }
 }

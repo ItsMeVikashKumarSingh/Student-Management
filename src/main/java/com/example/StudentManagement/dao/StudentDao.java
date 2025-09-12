@@ -1,6 +1,7 @@
 package com.example.StudentManagement.dao;
 
 import com.example.StudentManagement.entity.Student;
+import com.example.StudentManagement.entity.Teacher;
 import com.example.StudentManagement.util.StoredProcClient;
 import com.example.StudentManagement.util.SpEnums.EntityType;
 import org.springframework.stereotype.Repository;
@@ -21,6 +22,10 @@ public class StudentDao {
     public void delete(int roll) { sp.deleteByRoll(EntityType.STUDENT, roll); }
 
     public String getPictureName(int roll) { return sp.getPicNameByRoll(EntityType.STUDENT, roll); }
+    // Add getById method to StudentDao.java (example using EntityManager)
+    public Student getById(int roll) {
+        return sp.findById(Student.class, roll);
+    }
 
     public List<Object[]> list() { return sp.list(EntityType.STUDENT); }
 }

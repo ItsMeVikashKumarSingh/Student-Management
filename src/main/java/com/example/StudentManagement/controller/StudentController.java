@@ -42,10 +42,11 @@ public class StudentController {
                                 @RequestParam Integer age,
                                 @RequestParam Integer courseId,
                                 @RequestParam(required = false) String picName,
-                                @RequestPart(name = "profilePicture", required = false) MultipartFile profilePicture) throws IOException {
+                                @RequestPart(name = "profilePicture", required = false) MultipartFile profilePicture,
+                                @RequestParam(defaultValue = "false") boolean removePicture) throws IOException {
         validateCourseId(courseId);
         Student s = new Student(roll, name.trim(), email.trim(), age, courseId);
-        studentService.updateStudent(s, picName, profilePicture);
+        studentService.updateStudent(s, picName, profilePicture, removePicture);
         return "Student updated successfully!";
     }
 

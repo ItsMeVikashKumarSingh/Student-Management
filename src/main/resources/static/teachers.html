@@ -1,4 +1,3 @@
-<!-- teachers.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,22 +9,35 @@
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
     <script src="/js/shared.js"></script>
     <script>
+        const DEFAULT_IMG = '/images/default_profile_pic.jpg';
+
         $(document).ready(function() {
             fetchRole(function() {
                 toggleAdminBits();
                 loadTeachers();
             });
+
             $('#teacherForm').on('submit', function(e) {
                 e.preventDefault();
                 saveTeacher();
             });
+
             $('#teacherProfile').on('change', function() {
                 const f = this.files[0];
                 if (f) {
                     const reader = new FileReader();
                     reader.onload = e => $('#teacherPreview').attr('src', e.target.result).show();
                     reader.readAsDataURL(f);
+                    $('#removeImage').show();
+                    window.removePicture = false;
                 }
+            });
+
+            $('#removeImage').on('click', function() {
+                $('#teacherProfile').val('');
+                $('#teacherPreview').attr('src', '').hide();
+                $('#removeImage').hide();
+                window.removePicture = true;
             });
         });
 
@@ -48,12 +60,18 @@
             fd.append('courseId', $('#teacherCourseId').val());
             const file = $('#teacherProfile')[0].files[0];
             if (file) fd.append('profilePicture', file);
+            if (window.removePicture) fd.append('removePicture', 'true');
+
             const url = id ? '/teachers/update' : '/teachers/add';
             const method = id ? 'PUT' : 'POST';
+
             $.ajax({
                 url, method, data: fd, processData: false, contentType: false,
                 success: () => { resetForm(); loadTeachers(); },
-                error: err => alert(err.responseText || 'Server error')
+                error: err => {
+                    console.error('Teacher save error:', err);
+                    alert(err.responseText || 'Server error');
+                }
             });
         }
 
@@ -62,13 +80,15 @@
                 const rowData = rows.map(r => ({
                     id: r[0], name: r[1], email: r[2], course_name: r[3], courseId: r[4], profile_picture_name: r[5]
                 }));
+
                 const cols = [
                     {headerName:'Avatar', width:90, pinned:'left',
                         cellRenderer: p => {
                             const file = p.data.profile_picture_name;
-                            if (!file) return '';
+                            const src = file ? `/image/TeacherPic/${file}` : DEFAULT_IMG;
                             const img = document.createElement('img');
-                            img.src = `/image/TeacherPic/${file}`;
+                            img.src = src;
+                            img.alt = 'avatar';
                             img.style = 'width:36px; height:36px; border-radius:50%; object-fit:cover;';
                             return img;
                         }},
@@ -77,6 +97,7 @@
                     {headerName:'Email', field:'email', flex:1, filter:'agTextColumnFilter'},
                     {headerName:'Course', field:'course_name', flex:1, filter:'agTextColumnFilter'}
                 ];
+
                 if (window.currentRole === 'ADMIN') cols.push({
                     headerName:'Actions', minWidth:170, pinned:'right',
                     cellRenderer: p => {
@@ -87,6 +108,7 @@
                         return wrap;
                     }
                 });
+
                 const gridDiv = document.getElementById('teacherGrid');
                 gridDiv.innerHTML = '';
                 agGrid.createGrid(gridDiv, {
@@ -105,9 +127,18 @@
             $('#teacherEmail').val(row.email);
             $('#teacherCourseName').val(row.course_name);
             $('#teacherCourseId').val(row.courseId);
-            $('#teacherPreview').attr('src', row.profile_picture_name ? `/image/TeacherPic/${row.profile_picture_name}` : '').show();
+
+            if (row.profile_picture_name) {
+                $('#teacherPreview').attr('src', `/image/TeacherPic/${row.profile_picture_name}`).show();
+                $('#removeImage').show();
+            } else {
+                $('#teacherPreview').attr('src', '').hide();
+                $('#removeImage').hide();
+            }
+
             $('#teacherSubmitBtn').text('Update Teacher');
             window.scrollTo({top: 0, behavior: 'smooth'});
+            window.removePicture = false;
         }
 
         function delRow(id) {
@@ -124,7 +155,9 @@
             $('#teacherId').val('');
             $('#teacherCourseId').val('');
             $('#teacherPreview').attr('src', '').hide();
+            $('#removeImage').hide();
             $('#teacherSubmitBtn').text('Add Teacher');
+            window.removePicture = false;
         }
     </script>
 </head>
@@ -144,9 +177,10 @@
         <form id="teacherForm" class="p-3 border rounded bg-white shadow-sm">
             <div class="mb-3 text-center">
                 <img id="teacherPreview" src="" alt="Preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:none;">
+                <button type="button" id="removeImage" style="display:none; background:red; color:white; border:none; border-radius:50%; position:relative; top:-20px; left:-30px;">X</button>
             </div>
             <div class="mb-3">
-                <label class="form-label">Profile Picture (JPG/PNG, ≤ 5 MB)</label>
+                <label class="form-label">Profile Picture (JPG/PNG, ≤ 5 MB, optional)</label>
                 <input id="teacherProfile" type="file" class="form-control" accept="image/jpeg,image/png">
             </div>
             <div class="row g-3">

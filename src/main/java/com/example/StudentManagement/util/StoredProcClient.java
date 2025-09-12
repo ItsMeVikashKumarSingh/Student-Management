@@ -71,4 +71,8 @@ public class StoredProcClient {
         Object res = build(entity, ActionType.GET_PIC, SpPayloadUtil.saveRoll(roll)).getSingleResult();
         return castScalar(res, String.class);
     }
+
+    public <T> T findById(Class<T> entityClass, int id) {
+        return em.find(entityClass, id);
+    }
 }

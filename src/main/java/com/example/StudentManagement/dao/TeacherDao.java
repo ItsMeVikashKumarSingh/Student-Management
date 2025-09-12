@@ -23,4 +23,8 @@ public class TeacherDao {
     public String getPictureName(int id) { return sp.getPicNameById(EntityType.TEACHER, id); }
 
     public List<Object[]> list() { return sp.list(EntityType.TEACHER); }
+    // New method to fetch Teacher by ID
+    public Teacher getById(int id) {
+        return sp.findById(Teacher.class, id);
+    }
 }

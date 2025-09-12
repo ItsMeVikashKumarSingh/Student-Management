@@ -31,8 +31,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/error", "/static/**", "/login**", "/css/**", "/js/**").permitAll()
-                        .requestMatchers("/image/**").permitAll() // serve uploaded images publicly
+                        .requestMatchers("/", "/error", "/static/**", "/login**", "/css/**", "/js/**","/images/", "/css/").permitAll()
+                        .requestMatchers("/image/**").permitAll()
                         .requestMatchers("/dashboard.html", "/students.html", "/teachers.html", "/courses.html").authenticated()
                         .requestMatchers("/api/current-role").authenticated()
                         .requestMatchers("/students/all", "/teachers/all", "/courses/all","/courses/suggestions").hasAnyRole("USER", "ADMIN")
@@ -45,7 +45,6 @@ public class SecurityConfig {
                         .successHandler(customSuccessHandler())
                         .permitAll()
                 )
-//                .httpBasic(Customizer.withDefaults())
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login")

@@ -40,10 +40,11 @@ public class TeacherController {
                                 @RequestParam String email,
                                 @RequestParam Integer courseId,
                                 @RequestParam(required = false) String picName,
-                                @RequestPart(name = "profilePicture", required = false) MultipartFile profilePicture) throws IOException {
+                                @RequestPart(name = "profilePicture", required = false) MultipartFile profilePicture,
+                                @RequestParam(defaultValue = "false") boolean removePicture) throws IOException {
         validateCourseId(courseId);
         Teacher t = new Teacher(id, name.trim(), email.trim(), courseId);
-        teacherService.updateTeacher(t, picName, profilePicture);
+        teacherService.updateTeacher(t, picName, profilePicture, removePicture);
         return "Teacher updated successfully!";
     }
 
