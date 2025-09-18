@@ -1,7 +1,6 @@
 package com.example.StudentManagement.util;
 
 public final class SpEnums {
-
     private SpEnums() {}
 
     public enum EntityType {
@@ -12,7 +11,9 @@ public final class SpEnums {
     }
 
     public enum ActionType {
-        ADD("ADD"), UPDATE("UPDATE"), DELETE("DELETE"), GET("GET"), GET_PIC("GET_PIC");
+        ADD("ADD"), UPDATE("UPDATE"), DELETE("DELETE"), GET("GET"), GET_PIC("GET_PIC"),
+        LOGIN("LOGIN"), GET_BY_ID("GET_BY_ID"), GET_BY_COURSE("GET_BY_COURSE");  // NEW ACTIONS
+
         private final String code;
         ActionType(String c) { this.code = c; }
         public String code() { return code; }

@@ -197,3 +197,100 @@ footer {
     border-radius: 50%;
     object-fit: cover;
 }
+
+/*!* All your existing CSS remains exactly the same, just ADD these new styles at the end *!*/
+
+/*!* NEW: Input group styles for password field with generate button *!*/
+/*.input-group {*/
+/*    display: flex;*/
+/*    width: 100%;*/
+/*}*/
+
+/*.input-group .form-control {*/
+/*    border-top-right-radius: 0;*/
+/*    border-bottom-right-radius: 0;*/
+/*    border-right: 0;*/
+/*}*/
+
+/*.input-group .btn-outline-secondary {*/
+/*    border-top-left-radius: 0;*/
+/*    border-bottom-left-radius: 0;*/
+/*    border-color: #ddd;*/
+/*    background-color: #f8f9fa;*/
+/*    color: #6c757d;*/
+/*    border: 1px solid #ddd;*/
+/*    padding: 8px 16px;*/
+/*    white-space: nowrap;*/
+/*}*/
+
+/*.input-group .btn-outline-secondary:hover {*/
+/*    background-color: #e9ecef;*/
+/*    border-color: #bbb;*/
+/*    color: #495057;*/
+/*}*/
+
+/*.input-group .btn-outline-secondary:focus {*/
+/*    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);*/
+/*}*/
+
+/*!* Ensure form text styling is consistent *!*/
+/*.form-text {*/
+/*    font-size: 0.875rem;*/
+/*    color: #6c757d;*/
+/*    margin-top: 0.25rem;*/
+/*}*/
+
+/*.form-text strong {*/
+/*    color: #495057;*/
+/*}*/
+
+
+/* Add these styles to your existing shared.css */
+
+/* Input group styles for password field with generate button */
+.input-group {
+    display: flex;
+    width: 100%;
+}
+
+.input-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: 0;
+}
+
+.input-group .btn-outline-secondary {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-color: #ddd;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    white-space: nowrap;
+}
+
+.input-group .btn-outline-secondary:hover {
+    background-color: #e9ecef;
+    border-color: #bbb;
+    color: #495057;
+}
+
+.input-group .btn-outline-secondary:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Form validation styles */
+.form-control.is-invalid {
+    border-color: #dc3545;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.form-text strong {
+    color: #495057;
+}

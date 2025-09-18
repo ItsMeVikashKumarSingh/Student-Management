@@ -28,4 +28,9 @@ public class StudentDao {
     }
 
     public List<Object[]> list() { return sp.list(EntityType.STUDENT); }
+
+    // NEW METHOD ADDED
+    public List<Object[]> getByCourseId(Integer courseId) {
+        return sp.getStudentsByCourse(courseId);
+    }
 }

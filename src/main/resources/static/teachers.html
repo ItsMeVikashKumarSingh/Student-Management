@@ -10,8 +10,9 @@
     <script src="/js/shared.js"></script>
     <script>
         const DEFAULT_IMG = '/images/default_profile_pic.jpg';
-
         $(document).ready(function() {
+            console.log('Teachers page loaded successfully');
+
             fetchRole(function() {
                 toggleAdminBits();
                 loadTeachers();
@@ -19,12 +20,14 @@
 
             $('#teacherForm').on('submit', function(e) {
                 e.preventDefault();
+                console.log('Form submitted');
                 saveTeacher();
             });
 
             $('#teacherProfile').on('change', function() {
                 const f = this.files[0];
                 if (f) {
+                    console.log('Profile picture selected:', f.name);
                     const reader = new FileReader();
                     reader.onload = e => $('#teacherPreview').attr('src', e.target.result).show();
                     reader.readAsDataURL(f);
@@ -34,10 +37,17 @@
             });
 
             $('#removeImage').on('click', function() {
+                console.log('Remove image clicked');
                 $('#teacherProfile').val('');
                 $('#teacherPreview').attr('src', '').hide();
                 $('#removeImage').hide();
                 window.removePicture = true;
+            });
+
+            // Generate password button handler
+            $('#generatePasswordBtn').on('click', function() {
+                console.log('Generate password clicked');
+                generatePassword();
             });
         });
 
@@ -52,35 +62,155 @@
         }
 
         function saveTeacher() {
-            const fd = new FormData();
-            const id = $('#teacherId').val();
-            if (id) fd.append('id', id);
-            fd.append('name', $('#teacherName').val().trim());
-            fd.append('email', $('#teacherEmail').val().trim());
-            fd.append('courseId', $('#teacherCourseId').val());
-            const file = $('#teacherProfile')[0].files[0];
-            if (file) fd.append('profilePicture', file);
-            if (window.removePicture) fd.append('removePicture', 'true');
+            console.log('=== SAVE TEACHER FUNCTION START ===');
 
+            // Get all form values
+            const id = $('#teacherId').val();
+            const name = $('#teacherName').val().trim();
+            const email = $('#teacherEmail').val().trim();
+            const courseId = $('#teacherCourseId').val();
+            const password = $('#teacherPassword').val().trim();
+            const profileFile = $('#teacherProfile')[0].files[0];
+
+            // Debug logging
+            console.log('Form values collected:', {
+                id: id,
+                name: name,
+                email: email,
+                courseId: courseId,
+                password: password ? '***masked***' : '(empty)',
+                hasProfileFile: !!profileFile,
+                removePicture: window.removePicture
+            });
+
+            // Validation for new teachers
+            if (!id && !password) {
+                console.error('Validation failed: Password required for new teacher');
+                alert('Password is required when creating a new teacher!');
+                return;
+            }
+
+            // Additional validations
+            if (!name) {
+                alert('Teacher name is required!');
+                return;
+            }
+
+            if (!email) {
+                alert('Teacher email is required!');
+                return;
+            }
+
+            if (!courseId) {
+                alert('Please select a course!');
+                return;
+            }
+
+            // Create FormData
+            const fd = new FormData();
+
+            // Add form fields
+            if (id) {
+                fd.append('id', id);
+                console.log('Added ID to FormData:', id);
+            }
+
+            fd.append('name', name);
+            fd.append('email', email);
+            fd.append('courseId', courseId);
+            fd.append('password', password); // Always send password (even if empty)
+
+            console.log('Added basic fields to FormData');
+
+            // Add profile picture if selected
+            if (profileFile) {
+                fd.append('profilePicture', profileFile);
+                console.log('Added profile picture to FormData:', profileFile.name);
+            }
+
+            // Add remove picture flag
+            if (window.removePicture) {
+                fd.append('removePicture', 'true');
+                console.log('Added removePicture flag to FormData');
+            }
+
+            // Determine URL and method
             const url = id ? '/teachers/update' : '/teachers/add';
             const method = id ? 'PUT' : 'POST';
 
+            console.log('Making AJAX request:', { url, method });
+
+            // Log FormData contents (for debugging)
+            console.log('FormData contents:');
+            for (let [key, value] of fd.entries()) {
+                if (key === 'password') {
+                    console.log(`  ${key}: ***masked***`);
+                } else if (key === 'profilePicture') {
+                    console.log(`  ${key}: [File: ${value.name}]`);
+                } else {
+                    console.log(`  ${key}: ${value}`);
+                }
+            }
+
+            // Make AJAX request
             $.ajax({
-                url, method, data: fd, processData: false, contentType: false,
-                success: () => { resetForm(); loadTeachers(); },
-                error: err => {
-                    console.error('Teacher save error:', err);
-                    alert(err.responseText || 'Server error');
+                url: url,
+                method: method,
+                data: fd,
+                processData: false,
+                contentType: false,
+                beforeSend: function() {
+                    console.log('AJAX request started');
+                    // Disable submit button to prevent double submission
+                    $('#teacherSubmitBtn').prop('disabled', true).text('Saving...');
+                },
+                success: function(response) {
+                    console.log('AJAX success:', response);
+                    alert('Teacher saved successfully!');
+                    resetForm();
+                    loadTeachers();
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+
+                    let errorMessage = 'Failed to save teacher. ';
+                    if (xhr.responseText) {
+                        try {
+                            const errorResponse = JSON.parse(xhr.responseText);
+                            errorMessage += errorResponse.message || errorResponse.error || xhr.responseText;
+                        } catch (e) {
+                            errorMessage += xhr.responseText;
+                        }
+                    } else {
+                        errorMessage += `Server returned ${xhr.status} ${xhr.statusText}`;
+                    }
+
+                    alert(errorMessage);
+                },
+                complete: function() {
+                    console.log('AJAX request completed');
+                    // Re-enable submit button
+                    $('#teacherSubmitBtn').prop('disabled', false);
+                    const isUpdate = $('#teacherId').val();
+                    $('#teacherSubmitBtn').text(isUpdate ? 'Update Teacher' : 'Add Teacher');
                 }
             });
+
+            console.log('=== SAVE TEACHER FUNCTION END ===');
         }
 
         function loadTeachers() {
+            console.log('Loading teachers...');
             $.get('/teachers/all', rows => {
+                console.log('Teachers loaded:', rows.length, 'records');
                 const rowData = rows.map(r => ({
                     id: r[0], name: r[1], email: r[2], course_name: r[3], courseId: r[4], profile_picture_name: r[5]
                 }));
-
                 const cols = [
                     {headerName:'Avatar', width:90, pinned:'left',
                         cellRenderer: p => {
@@ -97,7 +227,6 @@
                     {headerName:'Email', field:'email', flex:1, filter:'agTextColumnFilter'},
                     {headerName:'Course', field:'course_name', flex:1, filter:'agTextColumnFilter'}
                 ];
-
                 if (window.currentRole === 'ADMIN') cols.push({
                     headerName:'Actions', minWidth:170, pinned:'right',
                     cellRenderer: p => {
@@ -108,7 +237,6 @@
                         return wrap;
                     }
                 });
-
                 const gridDiv = document.getElementById('teacherGrid');
                 gridDiv.innerHTML = '';
                 agGrid.createGrid(gridDiv, {
@@ -118,15 +246,20 @@
                     rowHeight: 44, headerHeight: 58,
                     onFirstDataRendered: e => e.api.sizeColumnsToFit()
                 });
-            }).fail(() => alert('Failed to load teachers data.'));
+            }).fail((xhr) => {
+                console.error('Failed to load teachers:', xhr);
+                alert('Failed to load teachers data.');
+            });
         }
 
         function editRow(row) {
+            console.log('Editing teacher:', row);
             $('#teacherId').val(row.id);
             $('#teacherName').val(row.name);
             $('#teacherEmail').val(row.email);
             $('#teacherCourseName').val(row.course_name);
             $('#teacherCourseId').val(row.courseId);
+            $('#teacherPassword').val(''); // Clear password field for security
 
             if (row.profile_picture_name) {
                 $('#teacherPreview').attr('src', `/image/TeacherPic/${row.profile_picture_name}`).show();
@@ -143,22 +276,70 @@
 
         function delRow(id) {
             if (!confirm('Delete this teacher?')) return;
+            console.log('Deleting teacher ID:', id);
             $.ajax({
-                url: `/teachers/delete/${id}`, method: 'DELETE',
-                success: () => loadTeachers(),
-                error: err => alert(err.responseText || 'Delete failed')
+                url: `/teachers/delete/${id}`,
+                method: 'DELETE',
+                success: () => {
+                    console.log('Teacher deleted successfully');
+                    alert('Teacher deleted successfully!');
+                    loadTeachers();
+                },
+                error: (xhr) => {
+                    console.error('Delete failed:', xhr);
+                    alert('Failed to delete teacher: ' + (xhr.responseText || 'Server error'));
+                }
             });
         }
 
         function resetForm() {
+            console.log('Resetting form');
             $('#teacherForm')[0].reset();
             $('#teacherId').val('');
             $('#teacherCourseId').val('');
+            $('#teacherPassword').val('');
             $('#teacherPreview').attr('src', '').hide();
             $('#removeImage').hide();
             $('#teacherSubmitBtn').text('Add Teacher');
             window.removePicture = false;
         }
+
+        function generatePassword() {
+            console.log('Generating password...');
+            $.get('/teachers/generate-password')
+                .done(function(response) {
+                    console.log('Password generated successfully');
+                    $('#teacherPassword').val(response.password);
+                    alert('Password generated: ' + response.password + '\n\nPlease save this password and share it with the teacher.');
+                })
+                .fail(function(xhr) {
+                    console.error('Password generation failed:', xhr);
+                    alert('Failed to generate password. Please try again.');
+                });
+        }
+
+        // Additional validation on form submit
+        $('#teacherForm').on('submit', function(e) {
+            e.preventDefault();
+
+            // Double-check password field exists and has value for new teachers
+            const id = $('#teacherId').val();
+            const password = $('#teacherPassword').val().trim();
+
+            console.log('Form validation - ID:', id, 'Password:', password ? 'provided' : 'empty');
+
+            if (!id && !password) {
+                console.warn('Validation failed: New teacher requires password');
+                $('#teacherPassword').focus().addClass('is-invalid');
+                alert('Password is required when creating a new teacher!');
+                return false;
+            }
+
+            // Remove validation styling
+            $('#teacherPassword').removeClass('is-invalid');
+
+            return true;
+        });
     </script>
 </head>
 <body>
@@ -197,6 +378,17 @@
                     <input id="teacherCourseName" type="text" class="form-control" placeholder="Type to search course" required>
                     <input id="teacherCourseId" type="hidden">
                     <small class="form-text text-muted">Select from suggestions or type to match.</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Password <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input id="teacherPassword" type="password" class="form-control" placeholder="Required for new teachers">
+                        <button type="button" id="generatePasswordBtn" class="btn btn-outline-secondary">Generate</button>
+                    </div>
+                    <small class="form-text text-muted">
+                        <strong>For new teachers:</strong> Password is required for login access.<br>
+                        <strong>For updates:</strong> Leave blank to keep existing password, or enter new password to change it.
+                    </small>
                 </div>
             </div>
             <input id="teacherId" type="hidden">

@@ -21,6 +21,7 @@ public class StudentService {
         this.storage = storage;
     }
 
+    // ALL YOUR EXISTING METHODS (UNCHANGED)
     @Transactional
     public Integer addStudent(Student s, String picName, MultipartFile profilePicture) throws IOException {
         s.setProfilePictureName(null);
@@ -54,12 +55,10 @@ public class StudentService {
             String finalName = storage.saveStudentImage(existing.getRoll(), picName, profilePicture);
             existing.setProfilePictureName(finalName);
         }
-        // else keep old (null means UI shows static default)
 
         dao.update(existing);
     }
 
-    // Important: do NOT mark readOnly=true because MySQL driver may block CALL on read-only connections
     @Transactional
     public List<Object[]> getStudents() {
         return dao.list();
@@ -70,5 +69,11 @@ public class StudentService {
         String old = dao.getPictureName(roll);
         if (old != null) storage.deleteStudentImage(old);
         dao.delete(roll);
+    }
+
+    // NEW METHOD ADDED
+    @Transactional
+    public List<Object[]> getStudentsByCourse(Integer courseId) {
+        return dao.getByCourseId(courseId);
     }
 }
