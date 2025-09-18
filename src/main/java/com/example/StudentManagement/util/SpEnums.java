@@ -5,7 +5,7 @@ public final class SpEnums {
     private SpEnums() {}
 
     public enum EntityType {
-        COURSE("COURSE"), STUDENT("STUDENT"), TEACHER("TEACHER");
+        COURSE("COURSE"), STUDENT("STUDENT"), TEACHER("TEACHER"), DOCUMENT("DOCUMENT");
         private final String code;
         EntityType(String c) { this.code = c; }
         public String code() { return code; }

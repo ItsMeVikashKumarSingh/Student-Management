@@ -1,0 +1,276 @@
+<!-- documents.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Documents - Student Management</title>
+    <link rel="stylesheet" href="/css/shared.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.1.2/dist/ag-grid-community.min.js"></script>
+    <script src="/js/shared.js"></script>
+    <script>
+        let sRoll = null;
+        let sName = null;
+        let flags = { aadhar: 0, pan: 0, marksheet: 0 };
+
+        $(document).ready(function() {
+            sRoll = getQueryParam('roll');
+            sName = decodeURIComponent(getQueryParam('name') || '');
+            if (!sRoll) { alert('Missing student roll'); window.location.href='/students.html'; return; }
+
+            fetchRole(function() {
+                initPageHeader();
+                if (window.currentRole === 'ADMIN') $('#insertBlock').removeClass('d-none');
+                loadFlags();
+                wireInputs();
+            });
+        });
+
+        function initPageHeader() {
+            const titleName = sName ? `${sName} (Roll ${sRoll})` : `Roll ${sRoll}`;
+            $('#pageTitle').text(`Manage Documents — ${titleName}`);
+        }
+
+        function wireInputs() {
+            $('#aadhar').on('change', function() {
+                if (this.files.length) {
+                    if (this.files[0].size > 5 * 1024 * 1024) { // 5MB limit
+                        alert('Aadhar file size must be ≤ 5 MB');
+                        $(this).val('');
+                        return;
+                    }
+                    $('#pan').prop('disabled', false);
+                } else {
+                    $('#pan').prop('disabled', true).val('');
+                    $('#marksheet').prop('disabled', true).val('');
+                }
+                toggleSave();
+            });
+            $('#pan').on('change', function() {
+                if (this.files.length) {
+                    if (this.files[0].size > 5 * 1024 * 1024) { // 5MB limit
+                        alert('PAN file size must be ≤ 5 MB');
+                        $(this).val('');
+                        return;
+                    }
+                    $('#marksheet').prop('disabled', false);
+                } else {
+                    $('#marksheet').prop('disabled', true).val('');
+                }
+                toggleSave();
+            });
+            $('#marksheet').on('change', function() {
+                if (this.files.length) {
+                    if (this.files[0].size > 5 * 1024 * 1024) { // 5MB limit
+                        alert('Marksheet file size must be ≤ 5 MB');
+                        $(this).val('');
+                        return;
+                    }
+                }
+                toggleSave();
+            });
+
+            $('#docForm').on('submit', function(e) {
+                e.preventDefault();
+                saveAll();
+            });
+
+            $('#deleteAll').on('click', function() {
+                if (!confirm('Delete all documents for this student?')) return;
+                $.ajax({
+                    url:`/documents/delete/${sRoll}`, method:'DELETE',
+                    success:() => { loadFlags(); alert('All documents deleted'); },
+                    error:err => alert(err.responseText || 'Delete failed')
+                });
+            });
+        }
+
+        function toggleSave() {
+            const ok = $('#aadhar')[0].files.length && $('#pan')[0].files.length && $('#marksheet')[0].files.length;
+            $('#saveBtn').prop('disabled', !ok);
+        }
+
+        function saveAll() {
+            const fd = new FormData();
+            fd.append('studentRoll', sRoll);
+            fd.append('aadhar', $('#aadhar')[0].files[0]);
+            fd.append('pan', $('#pan')[0].files[0]);
+            fd.append('marksheet', $('#marksheet')[0].files[0]);
+            $.ajax({
+                url:'/documents/upload', method:'POST', data:fd, processData:false, contentType:false,
+                success:() => { resetForm(); loadFlags(); },
+                error:err => alert(err.responseText || 'Upload failed')
+            });
+        }
+
+        function resetForm() {
+            $('#docForm')[0].reset();
+            $('#pan').prop('disabled', true).val('');
+            $('#marksheet').prop('disabled', true).val('');
+            $('#saveBtn').prop('disabled', true);
+        }
+
+        function loadFlags() {
+            $.get('/documents/all', rows => {
+                const row = rows.find(r => String(r[0]) === String(sRoll));
+                flags = {
+                    aadhar: row ? (row[2] ? 1 : 0) : 0,
+                    pan: row ? (row[3] ? 1 : 0) : 0,
+                    marksheet: row ? (row[4] ? 1 : 0) : 0
+                };
+                buildGrid();
+            }).fail(() => alert('Failed to load document flags.'));
+        }
+        // Add this to handle form submit and file upload
+        $('#docForm').on('submit', function(e) {
+            e.preventDefault(); // Stop normal form submit
+            const fd = new FormData(this); // Auto-grab all fields and files
+            fd.append('studentRoll', sRoll); // Add roll if not already in form
+
+            $.ajax({
+                url: '/documents/upload',
+                method: 'POST',
+                data: fd,
+                processData: false, // Required for FormData with files
+                contentType: false, // Let browser set multipart boundary
+                success: () => {
+                    alert('Documents saved successfully!');
+                    resetForm(); // Your existing reset function
+                    loadFlags(); // Reload grid
+                },
+                error: err => alert(err.responseText || 'Upload failed')
+            });
+        });
+
+        function buildGrid() {
+            const list = [
+                {type:'aadhar', label:'Aadhar', uploaded: flags.aadhar === 1, url:`/docs/${sRoll}/aadhar.pdf`},
+                {type:'pan', label:'PAN', uploaded: flags.pan === 1, url:`/docs/${sRoll}/pan.pdf`},
+                {type:'marksheet', label:'Marksheet', uploaded: flags.marksheet === 1, url:`/docs/${sRoll}/marksheet.pdf`}
+            ];
+            const cols = [
+                {headerName:'Document', field:'label', flex:1},
+                {headerName:'Uploaded', field:'uploaded', width:130,
+                    valueFormatter: p => p.value ? 'Yes' : 'No'
+                },
+                {headerName:'View', minWidth:160,
+                    cellRenderer: p => {
+                        const wrap = document.createElement('span');
+                        const btn = $('<button class="btn btn-sm btn-outline-secondary">Open</button>')
+                            .prop('disabled', !p.data.uploaded)
+                            .on('click', () => {
+                                const t = p.data.type;
+                                window.open(`/pdf-view.html?roll=${sRoll}&type=${t}`, '_blank');
+                            });
+                        wrap.appendChild(btn[0]);
+                        return wrap;
+                    }
+                }
+            ];
+            if (window.currentRole === 'ADMIN') {
+                cols.push({
+                    headerName:'Links', minWidth:220,
+                    cellRenderer: p => {
+                        const wrap = document.createElement('span');
+                        const a = document.createElement('a');
+                        a.textContent = 'Direct PDF';
+                        a.href = p.data.url;
+                        a.target = '_blank';
+                        a.className = 'btn btn-sm btn-outline-primary';
+                        if (!p.data.uploaded) a.classList.add('disabled');
+                        wrap.appendChild(a);
+                        return wrap;
+                    }
+                });
+            }
+            const gridDiv = document.getElementById('docGrid');
+            gridDiv.innerHTML = '';
+            agGrid.createGrid(gridDiv, {
+                columnDefs: cols,
+                rowData: list,
+                defaultColDef:{sortable:true,resizable:true,filter:true},
+                rowHeight:44, headerHeight:58,
+                onFirstDataRendered:e=>e.api.sizeColumnsToFit()
+            });
+        }
+    </script>
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a href="/dashboard.html">Dashboard</a></li>
+        <li><a href="/students.html">Students</a></li>
+        <li><a href="/teachers.html">Teachers</a></li>
+        <li><a href="/courses.html">Courses</a></li>
+        <li><a href="#" onclick="logout()">Logout</a></li>
+    </ul>
+</nav>
+<main>
+    <h2 id="pageTitle" class="mb-4">Manage Documents</h2>
+
+    <section id="insertBlock" class="d-none mb-4">
+        <form id="docForm" class="p-3 border rounded bg-white shadow-sm">
+            <div class="alert alert-info mb-3">
+                Upload sequence is enforced: first Aadhar, then PAN, then Marksheet. Only PDF files (≤ 5 MB) are allowed.
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Aadhar (PDF, ≤ 5 MB) *</label>
+                <input id="aadhar" type="file" class="form-control" accept="application/pdf" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">PAN (PDF, ≤ 5 MB) *</label>
+                <input id="pan" type="file" class="form-control" accept="application/pdf" disabled required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Marksheet (PDF, ≤ 5 MB) *</label>
+                <input id="marksheet" type="file" class="form-control" accept="application/pdf" disabled required>
+            </div>
+            <div class="d-flex gap-2">
+                <button id="saveBtn" class="btn btn-primary" type="submit" disabled>Save All</button>
+                <button id="deleteAll" class="btn btn-outline-danger" type="button">Delete All</button>
+            </div>
+        </form>
+    </section>
+
+    <div id="docGrid" class="ag-theme-alpine" style="height: 380px; width: 100%;"></div>
+</main>
+<footer>© 2025 Student Management System</footer>
+</body>
+</html>
+<!-- pdf-view.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Viewer</title>
+    <link rel="stylesheet" href="/css/shared.css">
+    <style>
+        body, html { height: 100%; margin: 0; }
+        .viewer-wrap { height: calc(100vh - 64px); }
+        iframe { width: 100%; height: 100%; border: none; }
+        header { padding: 12px 16px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/js/shared.js"></script>
+    <script>
+        $(function() {
+            const roll = getQueryParam('roll');
+            const type = getQueryParam('type');
+            if (!roll || !type) { document.getElementById('title').textContent = 'Missing parameters'; return; }
+            const pretty = type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById('title').textContent = `${pretty} — Roll ${roll}`;
+            const url = `/docs/${roll}/${type}.pdf#toolbar=1`;
+            document.getElementById('pdfFrame').src = url;
+        });
+    </script>
+</head>
+<body>
+<header>
+    <h3 id="title" style="margin:0;">PDF</h3>
+</header>
+<div class="viewer-wrap">
+    <iframe id="pdfFrame" title="PDF"></iframe>
+</div>
+</body>
+</html>

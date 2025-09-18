@@ -1,0 +1,36 @@
+<!-- pdf-view.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Viewer</title>
+    <link rel="stylesheet" href="/css/shared.css">
+    <style>
+        body, html { height: 100%; margin: 0; }
+        .viewer-wrap { height: calc(100vh - 64px); }
+        iframe { width: 100%; height: 100%; border: none; }
+        header { padding: 12px 16px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/js/shared.js"></script>
+    <script>
+        $(function() {
+            const roll = getQueryParam('roll');
+            const type = getQueryParam('type');
+            if (!roll || !type) { document.getElementById('title').textContent = 'Missing parameters'; return; }
+            const pretty = type.charAt(0).toUpperCase() + type.slice(1);
+            document.getElementById('title').textContent = `${pretty} — Roll ${roll}`;
+            const url = `/docs/${roll}/${type}.pdf#toolbar=1`;
+            document.getElementById('pdfFrame').src = url;
+        });
+    </script>
+</head>
+<body>
+<header>
+    <h3 id="title" style="margin:0;">PDF</h3>
+</header>
+<div class="viewer-wrap">
+    <iframe id="pdfFrame" title="PDF"></iframe>
+</div>
+</body>
+</html>

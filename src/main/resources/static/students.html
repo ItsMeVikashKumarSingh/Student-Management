@@ -29,17 +29,40 @@
                     reader.onload = e => $('#studentPreview').attr('src', e.target.result).show();
                     reader.readAsDataURL(f);
                     $('#removeImage').show();
-                    window.removePicture = false; // user selected a new file
+                    window.removePicture = false;
                 }
+                refreshClearButton();
             });
 
             $('#removeImage').on('click', function() {
                 $('#studentProfile').val('');
                 $('#studentPreview').attr('src', '').hide();
                 $('#removeImage').hide();
-                window.removePicture = true; // ask backend to remove current picture
+                window.removePicture = true;
+                refreshClearButton();
             });
+
+            // Dynamic Clear button
+            $('#studentName, #studentEmail, #studentAge, #studentCourseName').on('input change', refreshClearButton);
+            $('#clearBtn').on('click', resetForm);
+            refreshClearButton(); // Initial check
         });
+
+        function isFormDirty() {
+            return $('#studentName').val().trim() !== '' ||
+                $('#studentEmail').val().trim() !== '' ||
+                $('#studentAge').val() !== '' ||
+                $('#studentCourseName').val().trim() !== '' ||
+                $('#studentProfile')[0].files.length > 0;
+        }
+
+        function refreshClearButton() {
+            if (isFormDirty()) {
+                $('#clearBtn').show();
+            } else {
+                $('#clearBtn').hide();
+            }
+        }
 
         function toggleAdminBits() {
             if (window.currentRole === 'ADMIN') {
@@ -101,16 +124,30 @@
                     {headerName:'Course', field:'course_name', flex:1, filter:'agTextColumnFilter'}
                 ];
 
-                if (window.currentRole === 'ADMIN') cols.push({
-                    headerName:'Actions', minWidth:170, pinned:'right',
-                    cellRenderer: p => {
-                        const wrap = document.createElement('span');
-                        const eBtn = $('<button class="btn btn-sm btn-outline-primary me-2">Edit</button>').on('click', () => editRow(p.data));
-                        const dBtn = $('<button class="btn btn-sm btn-outline-danger">Delete</button>').on('click', () => delRow(p.data.roll));
-                        wrap.appendChild(eBtn[0]); wrap.appendChild(dBtn[0]);
-                        return wrap;
-                    }
-                });
+                if (window.currentRole === 'ADMIN') {
+                    cols.push({
+                        headerName:'Documents', minWidth:160, pinned:'right',
+                        cellRenderer: p => {
+                            const wrap = document.createElement('span');
+                            const dBtn = $('<button class="btn btn-sm btn-outline-secondary">View Docs</button>').on('click', () => {
+                                const name = encodeURIComponent(p.data.name);
+                                window.location.href = `/documents.html?roll=${p.data.roll}&name=${name}`;
+                            });
+                            wrap.appendChild(dBtn[0]);
+                            return wrap;
+                        }
+                    });
+                    cols.push({
+                        headerName:'Actions', minWidth:170, pinned:'right',
+                        cellRenderer: p => {
+                            const wrap = document.createElement('span');
+                            const eBtn = $('<button class="btn btn-sm btn-outline-primary me-2">Edit</button>').on('click', () => editRow(p.data));
+                            const dBtn = $('<button class="btn btn-sm btn-outline-danger">Delete</button>').on('click', () => delRow(p.data.roll));
+                            wrap.appendChild(eBtn[0]); wrap.appendChild(dBtn[0]);
+                            return wrap;
+                        }
+                    });
+                }
 
                 const gridDiv = document.getElementById('studentGrid');
                 gridDiv.innerHTML = '';
@@ -143,6 +180,7 @@
             $('#studentSubmitBtn').text('Update Student');
             window.scrollTo({top: 0, behavior: 'smooth'});
             window.removePicture = false;
+            refreshClearButton();
         }
 
         function delRow(id) {
@@ -162,6 +200,7 @@
             $('#removeImage').hide();
             $('#studentSubmitBtn').text('Add Student');
             window.removePicture = false;
+            refreshClearButton();
         }
     </script>
 </head>
@@ -210,7 +249,7 @@
             <input id="studentRoll" type="hidden">
             <div class="mt-3">
                 <button id="studentSubmitBtn" class="btn btn-primary me-2" type="submit">Add Student</button>
-                <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancel</button>
+                <button type="button" id="clearBtn" class="btn btn-secondary" style="display:none">Clear</button>
             </div>
         </form>
     </section>

@@ -86,8 +86,8 @@ StudentManagement/
    ```bash
    ```
 
-git clone [https://github.com/yourusername/student-management-system.git](https://github.com/yourusername/student-management-system.git)
-cd student-management-system
+git clone [https://github.com/ItsMeVikashKumarSingh/Student-Management.git](https://github.com/ItsMeVikashKumarSingh/Student-Management.git)
+cd student-management
 
 ````
 
@@ -302,6 +302,6 @@ Distributed under the MIT License. See `LICENSE` for more information. (Add a LI
 
 ## Contact
 
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter) - [email@example.com](mailto:email@example.com)
+Vikash Kumar Singh - [@Telegram](https://t.me/encrypted_ghost) - [Mail](mailto:vikashkumarsingh8352@gmail.com)
 
-Project Link: [https://github.com/yourusername/student-management-system](https://github.com/yourusername/student-management-system)
+Project Link: [https://github.com/ItsMeVikashKumarSingh/Student-Management.git](https://github.com/ItsMeVikashKumarSingh/Student-Management)

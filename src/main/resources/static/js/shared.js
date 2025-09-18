@@ -82,5 +82,12 @@ if (window.sharedLoaded) {
         $('#validationAlertClose').click(hideAlert);
     });
 
+    // Append to shared.js (end of file)
+    function getQueryParam(name) {
+        const params = new URLSearchParams(window.location.search);
+        return params.get(name);
+    }
+
+
     console.log('shared.js loaded successfully');
 }
