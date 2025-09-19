@@ -21,4 +21,10 @@ public class CourseDao {
     public void deleteCourse(int id) { sp.deleteById(EntityType.COURSE, id); }
 
     public List<Object[]> getCourses() { return sp.list(EntityType.COURSE); }
+
+    // Add this method to your existing CourseDao.java
+    public String getCourseNameById(int courseId) {
+        return sp.getCourseNameById(courseId);
+    }
+
 }

@@ -130,4 +130,15 @@ public class StoredProcClient {
 
         return build(EntityType.STUDENT, ActionType.GET_BY_COURSE, json).getResultList();
     }
+
+    // Add this method to your existing StoredProcClient.java
+    public String getCourseNameById(int courseId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", courseId);
+        String json = SpPayloadUtil.save(payload);
+
+        Object result = build(EntityType.COURSE, ActionType.GET_COURSE_NAME, json).getSingleResult();
+        return castScalar(result, String.class);  // Returns only course name string
+    }
+
 }

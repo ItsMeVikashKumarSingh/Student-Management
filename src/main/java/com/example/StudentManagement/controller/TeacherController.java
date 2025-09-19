@@ -117,6 +117,10 @@ public class TeacherController {
         }
 
         Teacher teacher = teacherService.getTeacherById(teacherId);
+        if (teacher != null && teacher.getCourseId() != null) {
+            String courseName = courseService.getCourseNameById(teacher.getCourseId());
+            teacher.setCourseName(courseName);  // Works with @Transient annotation
+        }
         List<Object[]> students = teacherService.getStudentsByCourse(teacher.getCourseId());
 
         return ResponseEntity.ok(Map.of(

@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public class TeacherDao {
 
-    private final StoredProcClient sp;
+    public final StoredProcClient sp;
 
     public TeacherDao(StoredProcClient sp) { this.sp = sp; }
 
@@ -36,4 +36,10 @@ public class TeacherDao {
     public List<Object[]> getStudentsByCourseId(Integer courseId) {
         return sp.getStudentsByCourse(courseId);
     }
+
+//    // Add this method to your existing TeacherDao class
+//    public Teacher getByEmail(String email) {
+//        return client.getByEmail(SpEnums.TEACHER, email, Teacher.class);
+//    }
+
 }

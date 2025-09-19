@@ -3,33 +3,21 @@ package com.example.StudentManagement.config;
 import com.example.StudentManagement.service.TeacherUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
-
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -45,120 +33,87 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/error", "/static/**", "/login**", "/css/**", "/js/**","/images/", "/css/").permitAll()
-                        .requestMatchers("/image/**").permitAll()
-                        .requestMatchers("/docs/**").permitAll()
-                        .requestMatchers("/teacher-login.html", "/teacher-dashboard.html").permitAll()
-                        .requestMatchers("/teachers/login", "/teachers/logout", "/teachers/dashboard", "/teachers/session", "/teachers/generate-password").permitAll()
-                        .requestMatchers("/dashboard.html", "/students.html", "/teachers.html", "/courses.html", "/documents.html").authenticated()
+                        // Public resources
+                        .requestMatchers("/", "/error", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/image/**", "/docs/**").permitAll()
+
+                        // Authentication endpoints
+                        .requestMatchers("/login.html", "/auth/authenticate").permitAll()
+                        .requestMatchers("/teacher-dashboard.html").permitAll()
+
+                        // Protected endpoints
+                        .requestMatchers("/dashboard.html", "/students.html", "/teachers.html", "/courses.html").authenticated()
                         .requestMatchers("/api/current-role").authenticated()
-                        .requestMatchers("/students/all", "/teachers/all", "/courses/all","/courses/suggestions").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/students/all", "/teachers/all", "/courses/all", "/courses/suggestions").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/students/add", "/students/update", "/students/delete/**",
                                 "/teachers/add", "/teachers/update", "/teachers/delete/**",
                                 "/courses/add", "/courses/update", "/courses/delete/**").hasRole("ADMIN")
-                        .requestMatchers("/documents/all",
-                                "/documents/upload",
-                                "/documents/delete/**").hasRole("ADMIN")
+                        .requestMatchers("/teachers/generate-password").hasRole("ADMIN")
+                        .requestMatchers("/teachers/**").authenticated()  // Teacher endpoints
+
                         .anyRequest().authenticated()
                 )
+                // **SESSION MANAGEMENT: Handle expired/invalid sessions**
+                .sessionManagement(session -> session
+                        .invalidSessionUrl("/login.html?expired=true")  // Redirect when session is invalid
+                        .maximumSessions(1)  // Allow only 1 session per user
+                        .maxSessionsPreventsLogin(false)  // Don't prevent new login, expire old session
+                        .expiredUrl("/login.html?expired=true")  // Redirect when session expires due to concurrent login
+                )
                 .formLogin(form -> form
-                        .successHandler(customSuccessHandler())
+                        .loginPage("/login.html")
                         .permitAll()
                 )
+                .httpBasic(Customizer.withDefaults())
+
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login")
+                        .logoutSuccessUrl("/login.html")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
                 .authenticationProvider(inMemoryAuthenticationProvider())
-                .authenticationProvider(teacherAuthenticationProvider())
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationSuccessHandler customSuccessHandler() {
-        return new SimpleUrlAuthenticationSuccessHandler() {
-            @Override
-            public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                                Authentication authentication) throws IOException, ServletException {
-                String redirectUrl = "/dashboard.html";
-                Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-
-                // Check if it's a teacher login
-                if (authorities.stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_TEACHER"))) {
-                    redirectUrl = "/teacher-dashboard.html";
-                } else {
-                    for (GrantedAuthority authority : authorities) {
-                        if (authority.getAuthority().equals("ROLE_ADMIN")) {
-                            redirectUrl = "/dashboard.html";
-                            break;
-                        } else if (authority.getAuthority().equals("ROLE_USER")) {
-                            redirectUrl = "/dashboard.html";
-                            break;
-                        }
-                    }
-                }
-                super.setDefaultTargetUrl(redirectUrl);
-                super.onAuthenticationSuccess(request, response, authentication);
-            }
-        };
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
-    // Separate authentication providers
     @Bean
     public AuthenticationProvider inMemoryAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(inMemoryUserDetailsService());
-        provider.setPasswordEncoder(noOpPasswordEncoder()); // Use NoOp for in-memory users
+        provider.setPasswordEncoder(noOpPasswordEncoder());
         return provider;
     }
 
-    @Bean
-    public AuthenticationProvider teacherAuthenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(teacherUserDetailsService);
-        provider.setPasswordEncoder(bcryptPasswordEncoder()); // Use BCrypt for teachers
-        return provider;
-    }
-
-    // Password encoders
     @Bean
     public BCryptPasswordEncoder bcryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
+    @SuppressWarnings("deprecation")
     public NoOpPasswordEncoder noOpPasswordEncoder() {
         return (NoOpPasswordEncoder) NoOpPasswordEncoder.getInstance();
-    }
-
-    // Main password encoder (delegating)
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        String encodingId = "bcrypt";
-        Map<String, PasswordEncoder> encoders = new HashMap<>();
-        encoders.put(encodingId, new BCryptPasswordEncoder());
-        encoders.put("noop", NoOpPasswordEncoder.getInstance());
-
-        DelegatingPasswordEncoder passwordEncoder = new DelegatingPasswordEncoder(encodingId, encoders);
-        passwordEncoder.setDefaultPasswordEncoderForMatches(NoOpPasswordEncoder.getInstance());
-
-        return passwordEncoder;
     }
 
     @Bean
     public UserDetailsService inMemoryUserDetailsService() {
         UserDetails admin = User.builder()
                 .username("admin")
-                .password("password") // Plain text for NoOp encoder
+                .password("password")
                 .roles("ADMIN")
                 .build();
 
         UserDetails user = User.builder()
                 .username("user")
-                .password("password") // Plain text for NoOp encoder
+                .password("password")
                 .roles("USER")
                 .build();
 

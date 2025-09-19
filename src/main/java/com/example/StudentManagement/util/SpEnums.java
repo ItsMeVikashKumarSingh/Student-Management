@@ -12,7 +12,8 @@ public final class SpEnums {
 
     public enum ActionType {
         ADD("ADD"), UPDATE("UPDATE"), DELETE("DELETE"), GET("GET"), GET_PIC("GET_PIC"),
-        LOGIN("LOGIN"), GET_BY_ID("GET_BY_ID"), GET_BY_COURSE("GET_BY_COURSE");  // NEW ACTIONS
+        LOGIN("LOGIN"), GET_BY_ID("GET_BY_ID"), GET_BY_COURSE("GET_BY_COURSE"),
+        GET_COURSE_NAME("GET_COURSE_NAME");  // ✅ NEW ACTION ADDED
 
         private final String code;
         ActionType(String c) { this.code = c; }

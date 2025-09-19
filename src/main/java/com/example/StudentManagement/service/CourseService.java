@@ -36,4 +36,10 @@ public class CourseService {
     public void deleteCourse(int id) {
         dao.deleteCourse(id);
     }
+
+    // Add this method to your existing CourseService.java
+    public String getCourseNameById(int courseId) {
+        return dao.getCourseNameById(courseId);
+    }
+
 }
