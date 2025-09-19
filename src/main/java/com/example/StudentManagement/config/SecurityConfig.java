@@ -1,6 +1,6 @@
 package com.example.StudentManagement.config;
 
-import com.example.StudentManagement.service.TeacherUserDetailsService;
+import com.example.StudentManagement.service.CombinedUserDetailsService;  // Use the new class
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,22 +11,17 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final TeacherUserDetailsService teacherUserDetailsService;
+    private final CombinedUserDetailsService combinedUserDetailsService;
 
-    public SecurityConfig(TeacherUserDetailsService teacherUserDetailsService) {
-        this.teacherUserDetailsService = teacherUserDetailsService;
+    public SecurityConfig(CombinedUserDetailsService combinedUserDetailsService) {
+        this.combinedUserDetailsService = combinedUserDetailsService;
     }
 
     @Bean
@@ -36,11 +31,9 @@ public class SecurityConfig {
                         // Public resources
                         .requestMatchers("/", "/error", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/image/**", "/docs/**").permitAll()
-
                         // Authentication endpoints
                         .requestMatchers("/login.html", "/auth/authenticate").permitAll()
                         .requestMatchers("/teacher-dashboard.html").permitAll()
-
                         // Protected endpoints
                         .requestMatchers("/dashboard.html", "/students.html", "/teachers.html", "/courses.html").authenticated()
                         .requestMatchers("/api/current-role").authenticated()
@@ -50,7 +43,6 @@ public class SecurityConfig {
                                 "/courses/add", "/courses/update", "/courses/delete/**").hasRole("ADMIN")
                         .requestMatchers("/teachers/generate-password").hasRole("ADMIN")
                         .requestMatchers("/teachers/**").authenticated()  // Teacher endpoints
-
                         .anyRequest().authenticated()
                 )
                 // **SESSION MANAGEMENT: Handle expired/invalid sessions**
@@ -65,7 +57,6 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .httpBasic(Customizer.withDefaults())
-
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login.html")
@@ -73,7 +64,7 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
-                .authenticationProvider(inMemoryAuthenticationProvider())
+                .authenticationProvider(authenticationProvider())
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
@@ -85,38 +76,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationProvider inMemoryAuthenticationProvider() {
+    public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(inMemoryUserDetailsService());
-        provider.setPasswordEncoder(noOpPasswordEncoder());
+        provider.setUserDetailsService(combinedUserDetailsService);
+        provider.setPasswordEncoder(bcryptPasswordEncoder());
         return provider;
     }
 
     @Bean
     public BCryptPasswordEncoder bcryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    @SuppressWarnings("deprecation")
-    public NoOpPasswordEncoder noOpPasswordEncoder() {
-        return (NoOpPasswordEncoder) NoOpPasswordEncoder.getInstance();
-    }
-
-    @Bean
-    public UserDetailsService inMemoryUserDetailsService() {
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password("password")
-                .roles("ADMIN")
-                .build();
-
-        UserDetails user = User.builder()
-                .username("user")
-                .password("password")
-                .roles("USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(admin, user);
     }
 }

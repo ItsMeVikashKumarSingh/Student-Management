@@ -1,14 +1,14 @@
 package com.example.StudentManagement.controller;
 
-import com.example.StudentManagement.entity.Teacher;
 import com.example.StudentManagement.dao.TeacherDao;
+import com.example.StudentManagement.entity.Teacher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -24,14 +24,10 @@ public class UnifiedAuthController {
 
     private final AuthenticationManager authenticationManager;
     private final TeacherDao teacherDao;
-    private final BCryptPasswordEncoder passwordEncoder;
 
-    public UnifiedAuthController(AuthenticationManager authenticationManager,
-                                 TeacherDao teacherDao,
-                                 BCryptPasswordEncoder passwordEncoder) {
+    public UnifiedAuthController(AuthenticationManager authenticationManager, TeacherDao teacherDao) {
         this.authenticationManager = authenticationManager;
         this.teacherDao = teacherDao;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/authenticate")
@@ -44,135 +40,84 @@ public class UnifiedAuthController {
         try {
             System.out.println("Login attempt for: " + username);
 
-            // Check if it's admin or user (session-based authentication)
-            if ("admin".equals(username) || "user".equals(username)) {
-                return authenticateAdminUser(username, password, request, response);
-            } else {
-                return authenticateTeacher(username, password, request, response);
-            }
-        } catch (Exception e) {
-            System.err.println("Authentication error: " + e.getMessage());
-            e.printStackTrace();
+            // Authenticate via manager (handles BCrypt for all users)
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(username, password)
+            );
 
+            // Set authentication and save to session
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            HttpSession session = request.getSession(true);
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                    SecurityContextHolder.getContext());
+
+            System.out.println("Authentication successful, session created");
+
+            response.put("success", true);
+            response.put("authType", "SESSION");
+
+            // Customize response based on user type
+            String userType = determineUserType(username, session, response);
+            response.put("userType", userType);
+            response.put("redirectUrl", "TEACHER".equals(userType) ? "/teacher-dashboard.html" : "/dashboard.html");
+            response.put("message", getWelcomeMessage(userType, username));
+
+            return response;
+        } catch (BadCredentialsException e) {
+            System.err.println("Bad credentials for: " + username);
+            response.put("success", false);
+            response.put("message", "Invalid username or password");
+            return response;
+        } catch (AuthenticationException e) {
+            System.err.println("Auth error: " + e.getMessage());
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "Authentication error: " + e.getMessage());
+            return response;
+        } catch (Exception e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            e.printStackTrace();
             response.put("success", false);
             response.put("message", "Authentication failed: " + e.getMessage());
             return response;
         }
     }
 
-    // **SIMPLE FIX: Direct session management**
-    private Map<String, Object> authenticateAdminUser(String username, String password,
-                                                      HttpServletRequest request,
-                                                      Map<String, Object> response) {
-        try {
-            System.out.println("Attempting admin authentication for: " + username);
-
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
-            );
-
-            // **KEY FIX: Set authentication and manually save to session**
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // Manually save SecurityContext to session
-            HttpSession session = request.getSession(true);
-            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                    SecurityContextHolder.getContext());
-
-            System.out.println("Admin authentication successful, session created");
-
-            response.put("success", true);
-            response.put("userType", username.toUpperCase());
-            response.put("authType", "SESSION");
-            response.put("redirectUrl", "/dashboard.html");
-
-            if ("admin".equals(username)) {
-                response.put("message", "Admin login successful! Welcome Administrator.");
-            } else {
-                response.put("message", "User login successful! Welcome User.");
-            }
-
-            return response;
-        } catch (BadCredentialsException e) {
-            System.err.println("Bad credentials for: " + username);
-            response.put("success", false);
-            response.put("message", "Invalid username or password for " + username + " account");
-            return response;
-        } catch (Exception e) {
-            System.err.println("Admin auth error: " + e.getMessage());
-            e.printStackTrace();
-            response.put("success", false);
-            response.put("message", "Authentication error: " + e.getMessage());
-            return response;
-        }
-    }
-
-    // Session-based authentication for teachers
-    private Map<String, Object> authenticateTeacher(String emailOrUsername, String password,
-                                                    HttpServletRequest request,
-                                                    Map<String, Object> response) {
-        try {
-            System.out.println("Attempting teacher authentication for: " + emailOrUsername);
-
-            Teacher teacher = teacherDao.getByEmail(emailOrUsername);
-
+    // Helper to determine user type and set session/response details
+    private String determineUserType(String username, HttpSession session, Map<String, Object> response) {
+        if ("admin".equals(username)) {
+            return "ADMIN";
+        } else if ("user".equals(username)) {
+            session.setAttribute("username", username);  // Optional, if needed for non-teacher users
+            return "USER";
+        } else {
+            // Load teacher details (post-auth)
+            Teacher teacher = teacherDao.getByEmail(username);
             if (teacher == null) {
-                response.put("success", false);
-                response.put("userNotFound", true);
-                response.put("message", "No teacher account found with email: " + emailOrUsername);
-                response.put("suggestion", "Please check your email address or contact administrator.");
-                return response;
+                throw new RuntimeException("Teacher not found after successful auth");  // Should not happen
             }
-
-            if (passwordEncoder.matches(password, teacher.getPassword())) {
-                // Create authentication for teacher
-                Authentication auth = new UsernamePasswordAuthenticationToken(
-                        teacher.getEmail(),
-                        null,
-                        java.util.List.of(() -> "ROLE_TEACHER")
-                );
-
-                // Set authentication and save to session
-                SecurityContextHolder.getContext().setAuthentication(auth);
-
-                HttpSession session = request.getSession(true);
-                session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                        SecurityContextHolder.getContext());
-
-                // Store teacher info for easy access
-                session.setAttribute("teacherId", teacher.getId());
-                session.setAttribute("teacherName", teacher.getName());
-                session.setAttribute("teacherEmail", teacher.getEmail());
-
-                response.put("success", true);
-                response.put("userType", "TEACHER");
-                response.put("authType", "SESSION");
-                response.put("redirectUrl", "/teacher-dashboard.html");
-                response.put("user", Map.of(
-                        "id", teacher.getId(),
-                        "name", teacher.getName(),
-                        "email", teacher.getEmail(),
-                        "role", "TEACHER"
-                ));
-                response.put("message", "Teacher login successful! Welcome " + teacher.getName() + ".");
-
-                return response;
-            } else {
-                response.put("success", false);
-                response.put("wrongPassword", true);
-                response.put("message", "Incorrect password for " + teacher.getName());
-                response.put("suggestion", "Please check your password or contact administrator.");
-                return response;
-            }
-        } catch (Exception e) {
-            System.err.println("Teacher auth error: " + e.getMessage());
-            e.printStackTrace();
-            response.put("success", false);
-            response.put("message", "Teacher authentication error: " + e.getMessage());
-            return response;
+            session.setAttribute("teacherId", teacher.getId());
+            session.setAttribute("teacherName", teacher.getName());
+            session.setAttribute("teacherEmail", teacher.getEmail());
+            response.put("user", Map.of(
+                    "id", teacher.getId(),
+                    "name", teacher.getName(),
+                    "email", teacher.getEmail(),
+                    "role", "TEACHER"
+            ));
+            return "TEACHER";
         }
     }
-    // Add this method to your UnifiedAuthController.java
+
+    // Helper for welcome message
+    private String getWelcomeMessage(String userType, String username) {
+        return switch (userType) {
+            case "ADMIN" -> "Admin login successful! Welcome Administrator.";
+            case "USER" -> "User login successful! Welcome User.";
+            case "TEACHER" -> "Teacher login successful! Welcome " + username + ".";
+            default -> "Login successful!";
+        };
+    }
 
     @GetMapping("/api/session-check")
     @ResponseBody
@@ -186,5 +131,4 @@ public class UnifiedAuthController {
             return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Session expired"));
         }
     }
-
 }
