@@ -1,36 +1,56 @@
 package com.example.StudentManagement.dao;
 
 import com.example.StudentManagement.entity.Student;
-import com.example.StudentManagement.entity.Teacher;
-import com.example.StudentManagement.util.StoredProcClient;
-import com.example.StudentManagement.util.SpEnums.EntityType;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public class StudentDao {
+public class StudentDao extends BaseDao {
 
-    private final StoredProcClient sp;
+    public Integer add(Student s, String dynamicSql) {
+        setSessionVar("p_studentName", s.getName());
+        setSessionVar("p_studentEmail", s.getEmail());
+        setSessionVar("p_studentAge", s.getAge());
+        setSessionVar("p_courseId", s.getCourseId());
+        setSessionVar("p_profilePictureName", s.getProfilePictureName());
 
-    public StudentDao(StoredProcClient sp) { this.sp = sp; }
-
-    public Integer add(Student s) { return sp.add(EntityType.STUDENT, s); }
-
-    public void update(Student s) { sp.update(EntityType.STUDENT, s); }
-
-    public void delete(int roll) { sp.deleteByRoll(EntityType.STUDENT, roll); }
-
-    public String getPictureName(int roll) { return sp.getPicNameByRoll(EntityType.STUDENT, roll); }
-    // Add getById method to StudentDao.java (example using EntityManager)
-    public Student getById(int roll) {
-        return sp.findById(Student.class, roll);
+        Object result = callStoredProc("addstudent", dynamicSql);
+        return result != null ? ((Number) result).intValue() : null;
     }
 
-    public List<Object[]> list() { return sp.list(EntityType.STUDENT); }
+    public void update(Student s, String dynamicSql) {
+        setSessionVar("p_studentRoll", s.getRoll());
+        setSessionVar("p_studentName", s.getName());
+        setSessionVar("p_studentEmail", s.getEmail());
+        setSessionVar("p_studentAge", s.getAge());
+        setSessionVar("p_courseId", s.getCourseId());
+        setSessionVar("p_profilePictureName", s.getProfilePictureName());
 
-    // NEW METHOD ADDED
+        callStoredProcNoResult("updatestudent", dynamicSql);
+    }
+
+    public void delete(int roll, String dynamicSql) {
+        setSessionVar("p_studentRoll", roll);
+        callStoredProcNoResult("deletestudent", dynamicSql);
+    }
+
+    public String getPictureName(int roll) {
+        setSessionVar("p_studentRoll", roll);
+        Object result = callStoredProc("getstudentpicname", null);
+        return result != null ? result.toString() : null;
+    }
+
+    public Student getById(int roll) {
+        return em.find(Student.class, roll);
+    }
+
+    public List<Object[]> list() {
+        return callStoredProcList("getstudents", null);
+    }
+
     public List<Object[]> getByCourseId(Integer courseId) {
-        return sp.getStudentsByCourse(courseId);
+        setSessionVar("p_courseId", courseId);
+        return callStoredProcList("getstudentsbycourse", null);
     }
 }

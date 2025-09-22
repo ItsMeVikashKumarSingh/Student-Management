@@ -18,43 +18,31 @@ public class TeacherService {
     private final FileStorageService storage;
     private final BCryptPasswordEncoder passwordEncoder;
 
-    // NEW WAY (Use this):
     public TeacherService(TeacherDao dao, FileStorageService storage, BCryptPasswordEncoder passwordEncoder) {
         this.dao = dao;
         this.storage = storage;
-        this.passwordEncoder = passwordEncoder; // Inject via constructor
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public Integer addTeacher(Teacher t, String picName, MultipartFile profilePicture, String password) throws IOException {
-        // DEBUG: Log received parameters
-        System.out.println("=== TEACHER SERVICE DEBUG ===");
-        System.out.println("Teacher: " + t.getName() + " / " + t.getEmail());
-        System.out.println("Password parameter: " + (password != null ? "RECEIVED (length=" + password.length() + ")" : "NULL"));
-
         t.setProfilePictureName(null);
 
-        // Hash password before saving
         if (password != null && !password.trim().isEmpty()) {
             String hashedPassword = passwordEncoder.encode(password.trim());
             t.setPassword(hashedPassword);
-            System.out.println("Password hashed and set on Teacher object");
-        } else {
-            System.out.println("WARNING: Password is null or empty - this will cause database error!");
         }
 
-        // DEBUG: Log Teacher object before DAO call
-        System.out.println("Calling DAO with Teacher object - Password field: " + (t.getPassword() != null ? "SET" : "NULL"));
-
-        Integer id = dao.add(t);
-        t.setId(id);
+        Integer generatedId = dao.add(t, null);
+        t.setId(generatedId);
 
         if (profilePicture != null && !profilePicture.isEmpty()) {
-            String finalName = storage.saveTeacherImage(id, picName, profilePicture);
+            String finalName = storage.saveTeacherImage(generatedId, picName, profilePicture);
             t.setProfilePictureName(finalName);
-            dao.update(t);
+            dao.update(t, null);
         }
-        return id;
+
+        return generatedId;
     }
 
     @Transactional
@@ -65,12 +53,10 @@ public class TeacherService {
         existing.setEmail(input.getEmail());
         existing.setCourseId(input.getCourseId());
 
-        // Update password only if provided (for updates)
         if (password != null && !password.trim().isEmpty()) {
             existing.setPassword(passwordEncoder.encode(password.trim()));
         }
 
-        // Handle profile picture logic...
         String old = existing.getProfilePictureName();
         if (removePicture) {
             if (old != null) storage.deleteTeacherImage(old);
@@ -81,15 +67,14 @@ public class TeacherService {
             existing.setProfilePictureName(finalName);
         }
 
-        dao.update(existing);
+        dao.update(existing, null);
     }
-
 
     @Transactional
     public void deleteTeacher(int id) {
         String old = dao.getPictureName(id);
         if (old != null) storage.deleteTeacherImage(old);
-        dao.delete(id);
+        dao.delete(id, null);
     }
 
     @Transactional
@@ -97,7 +82,6 @@ public class TeacherService {
         return dao.list();
     }
 
-    // NEW: Authentication methods (following your pattern)
     public Teacher authenticateTeacher(String email, String password) {
         if (email == null || password == null) return null;
 
@@ -105,7 +89,7 @@ public class TeacherService {
         if (teacher == null) return null;
 
         if (passwordEncoder.matches(password, teacher.getPassword())) {
-            teacher.setPassword(null); // Remove password from response
+            teacher.setPassword(null);
             return teacher;
         }
         return null;
@@ -123,7 +107,7 @@ public class TeacherService {
     public Teacher getTeacherById(int id) {
         Teacher teacher = dao.getById(id);
         if (teacher != null) {
-            teacher.setPassword(null); // Remove password from response
+            teacher.setPassword(null);
         }
         return teacher;
     }

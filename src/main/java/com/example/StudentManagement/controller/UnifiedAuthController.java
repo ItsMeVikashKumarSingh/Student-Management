@@ -11,6 +11,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,8 @@ public class UnifiedAuthController {
     }
 
     @PostMapping("/authenticate")
+    @Transactional  // ✅ FIX: Add transaction support
+
     @ResponseBody
     public Map<String, Object> authenticate(@RequestParam String username,
                                             @RequestParam String password,

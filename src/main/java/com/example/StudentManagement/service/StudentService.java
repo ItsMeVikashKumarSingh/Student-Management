@@ -21,19 +21,20 @@ public class StudentService {
         this.storage = storage;
     }
 
-    // ALL YOUR EXISTING METHODS (UNCHANGED)
     @Transactional
     public Integer addStudent(Student s, String picName, MultipartFile profilePicture) throws IOException {
         s.setProfilePictureName(null);
-        Integer id = dao.add(s);
-        s.setRoll(id);
+
+        Integer generatedRoll = dao.add(s, null);
+        s.setRoll(generatedRoll);
 
         if (profilePicture != null && !profilePicture.isEmpty()) {
-            String finalName = storage.saveStudentImage(id, picName, profilePicture);
+            String finalName = storage.saveStudentImage(generatedRoll, picName, profilePicture);
             s.setProfilePictureName(finalName);
-            dao.update(s);
+            dao.update(s, null);
         }
-        return id;
+
+        return generatedRoll;
     }
 
     @Transactional
@@ -46,7 +47,6 @@ public class StudentService {
         existing.setCourseId(input.getCourseId());
 
         String old = existing.getProfilePictureName();
-
         if (removePicture) {
             if (old != null) storage.deleteStudentImage(old);
             existing.setProfilePictureName(null);
@@ -56,7 +56,7 @@ public class StudentService {
             existing.setProfilePictureName(finalName);
         }
 
-        dao.update(existing);
+        dao.update(existing, null);
     }
 
     @Transactional
@@ -68,10 +68,9 @@ public class StudentService {
     public void deleteStudent(int roll) {
         String old = dao.getPictureName(roll);
         if (old != null) storage.deleteStudentImage(old);
-        dao.delete(roll);
+        dao.delete(roll, null);
     }
 
-    // NEW METHOD ADDED
     @Transactional
     public List<Object[]> getStudentsByCourse(Integer courseId) {
         return dao.getByCourseId(courseId);

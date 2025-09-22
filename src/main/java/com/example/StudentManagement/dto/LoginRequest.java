@@ -1,4 +1,5 @@
-package com.example.StudentManagement.dao;
+// LoginRequest.java
+package com.example.StudentManagement.dto;
 
 public class LoginRequest {
     private String email;

@@ -8,11 +8,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-public class CombinedUserDetailsService implements UserDetailsService {  // Renamed for clarity
+public class CombinedUserDetailsService implements UserDetailsService {
 
     private final TeacherDao teacherDao;
 
@@ -21,22 +22,23 @@ public class CombinedUserDetailsService implements UserDetailsService {  // Rena
     }
 
     @Override
+    @Transactional// ✅ FIX: Add transaction support
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // Handle in-memory admin/user with BCrypt-hashed passwords
         if ("admin".equals(username)) {
             return User.builder()
                     .username("admin")
-                    .password("$2a$10$A4PSD0eLj/aGc8POIuSH.ue9HdXIc3yBN4nABKjaafE91Tz/P.3te")  // Your BCrypt hash
+                    .password("$2a$10$A4PSD0eLj/aGc8POIuSH.ue9HdXIc3yBN4nABKjaafE91Tz/P.3te")
                     .authorities(List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))
                     .build();
         } else if ("user".equals(username)) {
             return User.builder()
                     .username("user")
-                    .password("$2a$10$A4PSD0eLj/aGc8POIuSH.ue9HdXIc3yBN4nABKjaafE91Tz/P.3te")  // Your BCrypt hash
+                    .password("$2a$10$A4PSD0eLj/aGc8POIuSH.ue9HdXIc3yBN4nABKjaafE91Tz/P.3te")
                     .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
                     .build();
         } else {
-            // Handle teachers (unchanged, assumes password is BCrypt-encoded in DB)
+            // Handle teachers using updated DAO (now within transaction context)
             Teacher teacher = teacherDao.getByEmail(username);
 
             if (teacher == null) {

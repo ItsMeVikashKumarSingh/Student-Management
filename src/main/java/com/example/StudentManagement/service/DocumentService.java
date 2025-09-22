@@ -25,13 +25,13 @@ public class DocumentService {
     public void uploadAll(int studentRoll, MultipartFile aadhar, MultipartFile pan, MultipartFile marksheet) throws IOException {
         storage.saveAllPdfs(studentRoll, aadhar, pan, marksheet);
         Document doc = new Document(studentRoll, "aadhar.pdf", "pan.pdf", "marksheet.pdf", true, true, true);
-        dao.upsert(doc);
+        dao.upsert(doc, null);
     }
 
     @Transactional
     public void deleteAll(int studentRoll) {
         storage.deleteAll(studentRoll);
-        dao.deleteByStudentRoll(studentRoll);
+        dao.deleteByStudentRoll(studentRoll, null);
     }
 
     @Transactional

@@ -17,9 +17,10 @@ public class CourseService {
     }
 
     @Transactional
-    public void addCourse(Course course) {
-        Integer id = dao.addCourse(course);
-        course.setId(id);
+    public Integer addCourse(Course course) {
+        Integer generatedId = dao.addCourse(course, null);
+        course.setId(generatedId);
+        return generatedId;
     }
 
     @Transactional
@@ -29,17 +30,15 @@ public class CourseService {
 
     @Transactional
     public void updateCourse(Course course) {
-        dao.updateCourse(course);
+        dao.updateCourse(course, null);
     }
 
     @Transactional
     public void deleteCourse(int id) {
-        dao.deleteCourse(id);
+        dao.deleteCourse(id, null);
     }
 
-    // Add this method to your existing CourseService.java
     public String getCourseNameById(int courseId) {
         return dao.getCourseNameById(courseId);
     }
-
 }

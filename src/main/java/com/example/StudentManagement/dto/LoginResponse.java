@@ -1,4 +1,5 @@
-package com.example.StudentManagement.dao;
+// LoginResponse.java
+package com.example.StudentManagement.dto;
 
 import com.example.StudentManagement.entity.Teacher;
 
